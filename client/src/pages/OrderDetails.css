@@ -1,0 +1,303 @@
+.order-details-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.status-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.order-title h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 2rem;
+}
+
+.order-meta {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: capitalize;
+  font-size: 0.9rem;
+}
+
+.status-badge.pending {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+}
+
+.status-badge.confirmed {
+  background-color: var(--info-bg);
+  color: var(--brand-primary);
+}
+
+.status-badge.in_progress {
+  background-color: var(--info-bg);
+  color: var(--brand-primary);
+}
+
+.status-badge.completed {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.status-badge.delivered {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.status-badge.cancelled {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.status-sub-badge {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.order-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+
+.main-info {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-card {
+  background: var(--bg-card);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.info-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-main);
+  font-size: 1.2rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+}
+
+.info-label {
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.description-section {
+  margin-bottom: 2rem;
+}
+
+.description-text {
+  line-height: 1.6;
+  color: var(--text-light);
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.order-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.status-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.status-select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  width: 100%;
+}
+
+.update-btn {
+  background-color: var(--success);
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.update-btn:hover {
+  background-color: #2f7c4f;
+}
+
+.cancel-btn {
+  background-color: var(--danger);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.cancel-btn:hover {
+  background-color: #b53a3a;
+}
+
+.cancel-btn:disabled {
+  background-color: #f2a3a3;
+  cursor: not-allowed;
+}
+
+.approve-btn {
+  background-color: var(--brand-primary);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.approve-btn:hover {
+  background-color: #1f5e5a;
+}
+
+.approve-btn:disabled {
+  background-color: rgba(var(--brand-primary-rgb), 0.35);
+  cursor: not-allowed;
+}
+
+.pay-btn {
+  background-color: #1f6f8b;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  width: 100%;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+}
+
+.pay-btn:hover {
+  background-color: #185c73;
+}
+
+.pay-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.payment-status.paid {
+  color: var(--success);
+}
+
+.payment-status.failed {
+  color: var(--danger);
+}
+
+.payment-status.pending {
+  color: var(--warning);
+}
+
+.cancel-note {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-light);
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.back-link:hover {
+  color: var(--text-main);
+}
+
+@media (max-width: 768px) {
+  .order-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+

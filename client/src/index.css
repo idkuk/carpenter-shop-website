@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  /* Brand Colors */
+  --brand-primary: #2A6F6B;
+  --brand-primary-rgb: 42, 111, 107;
+  --brand-secondary: #C0863B;
+  --brand-tertiary: #E2B76B;
+  --brand-muted: #F2E6D6;
+
+  /* Wood Theme Colors */
+  --wood-primary: var(--brand-primary);
+  --wood-dark: #2B2A27;
+  --wood-light: #D8C4A5;
+  --wood-accent: var(--brand-secondary);
+  --wood-cream: #F6F0E7;
+  --text-main: #2F2B27;
+  --text-light: #6B645D;
+  --bg-main: #F4F1EC;
+  --bg-card: #FFFFFF;
+  --border-color: #E4DED6;
+  --muted-bg: #EFE7DD;
+  --info-bg: #E3F2FD;
+  --success-bg: #E8F5E9;
+  --warning-bg: #FFF3E0;
+  --danger-bg: #FFEBEE;
+
+  /* Functional Colors */
+  --success: #3F8F5B;
+  --warning: #D08B36;
+  --danger: #D84B4B;
+}
+
+[data-theme='dark'] {
+  /* Brand Colors */
+  --brand-primary: #7ECFC3;
+  --brand-primary-rgb: 126, 207, 195;
+  --brand-secondary: #D9A46B;
+  --brand-tertiary: #F0C987;
+  --brand-muted: #2C2521;
+
+  /* Dark Theme Colors */
+  --wood-primary: var(--brand-primary);
+  --wood-dark: #E6DDD2;
+  --wood-light: #8E7761;
+  --wood-accent: var(--brand-secondary);
+  --wood-cream: #2A2420;
+  --text-main: #F1ECE6;
+  --text-light: #C9BFB4;
+  --bg-main: #121110;
+  --bg-card: #1B1916;
+  --border-color: #2F2B26;
+  --muted-bg: #2A2420;
+  --info-bg: #20333B;
+  --success-bg: #213227;
+  --warning-bg: #3A2A1C;
+  --danger-bg: #3A1E1E;
+
+  --success: #5CB980;
+  --warning: #E1A04E;
+  --danger: #EE6A6A;
+}
+
+body {
+  margin: 0;
+  font-family: 'Lato', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Playfair Display', serif;
+  color: var(--wood-dark);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Common utility classes relying on theme vars */
+.card,
+.info-card,
+.main-info {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+input,
+select,
+textarea {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+a {
+  color: var(--wood-primary);
+}
+

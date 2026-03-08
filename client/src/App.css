@@ -1,0 +1,137 @@
+/* App.css - Main Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Lato', 'Segoe UI', sans-serif;
+  background-color: var(--wood-cream);
+  /* Changed from generic #f8f9fa */
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.page-loading {
+  padding: 60px;
+  text-align: center;
+  color: var(--text-light);
+  font-weight: 600;
+  font-family: 'Playfair Display', serif;
+  /* Stylish font for loading */
+}
+
+/* Navigation Styles */
+.navbar {
+  /* Wood texture or solid rich brown */
+  background: linear-gradient(180deg, var(--wood-dark) 0%, #3E2723 100%);
+  border-bottom: 4px solid var(--wood-accent);
+  /* Wooden trim effect */
+  box-shadow: 0 4px 12px rgba(62, 39, 35, 0.3);
+}
+
+.navbar-brand {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.8rem;
+  color: var(--wood-light) !important;
+  /* Make sure brand stands out */
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Button Styles */
+.btn-primary {
+  background: linear-gradient(135deg, var(--wood-primary) 0%, var(--wood-dark) 100%);
+  border: 1px solid var(--wood-dark);
+  padding: 10px 25px;
+  border-radius: 4px;
+  /* More angular, like wood cuts */
+  transition: all 0.3s ease;
+  color: var(--wood-cream);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, var(--wood-accent) 0%, var(--wood-primary) 100%);
+  border-color: var(--wood-accent);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary {
+  background: var(--wood-cream);
+  color: var(--wood-dark);
+  border: 2px solid var(--wood-dark);
+  padding: 10px 25px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--wood-light);
+  color: var(--text-main);
+  border-color: var(--text-main);
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--bg-card);
+  /* Or very light wood texture */
+  border: 1px solid var(--wood-light);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(93, 64, 55, 0.1);
+  /* Brownish shadow */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(93, 64, 55, 0.2);
+  border-color: var(--wood-accent);
+}
+
+/* Form Styles */
+.form-control {
+  border-radius: 4px;
+  border: 1px solid var(--wood-light);
+  padding: 12px 15px;
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  font-family: 'Lato', sans-serif;
+}
+
+.form-control:focus {
+  border-color: var(--wood-accent);
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(210, 105, 30, 0.25);
+  /* Focus ring color matches accent */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 10px;
+  }
+
+  .navbar-brand {
+    font-size: 1.4rem;
+  }
+}
+

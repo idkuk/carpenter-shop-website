@@ -14,6 +14,8 @@ require('dotenv').config();
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'change_this_secret') {
@@ -46,14 +48,12 @@ const SHOULD_EXPOSE_VERIFICATION_CODE = process.env.NODE_ENV !== 'production' &&
 const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
 
-const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:3000';
-const corsOrigins = corsOriginEnv.split(',').map((origin) => origin.trim()).filter(Boolean);
-const corsOptions = {
-  origin: corsOrigins.includes('*') ? '*' : corsOrigins,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: "*",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -716,15 +716,16 @@ const sampleServices = [
 
 // MongoDB Connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/carpenter_shop';
-mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(async () => {
-    console.log('Connected to MongoDB');
-    await seedAdmin();
-    await seedServices();
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
-  });
+
+mongoose.connect(mongoUri)
+.then(async () => {
+  console.log("MongoDB connected successfully");
+  await seedAdmin();
+  await seedServices();
+})
+.catch((err) => {
+  console.error("MongoDB connection failed:", err);
+});
 
 // Routes
 app.get('/api/health', (req, res) => {

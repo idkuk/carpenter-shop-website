@@ -48,6 +48,7 @@ const SHOULD_EXPOSE_VERIFICATION_CODE = process.env.NODE_ENV !== 'production' &&
 const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
 
+const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
@@ -58,10 +59,10 @@ cloudinary.config({
 });
 
 const storage = new CloudinaryStorage({
-  cloudinary,
+  cloudinary: cloudinary,
   params: {
     folder: "carpenter-shop",
-    allowed_formats: ["jpg", "png", "jpeg"]
+    allowed_formats: ["jpg", "jpeg", "png"]
   }
 });
 

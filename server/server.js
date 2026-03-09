@@ -49,7 +49,7 @@ const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
 
 const { v2: cloudinary } = require("cloudinary");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary").CloudinaryStorage;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,

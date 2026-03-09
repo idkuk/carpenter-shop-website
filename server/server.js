@@ -2337,17 +2337,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Server error', error: err.message });
 });
 
-if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, '..', 'client', 'build');
-  app.use(express.static(clientBuildPath));
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api')) {
-      return res.status(404).json({ message: 'API route not found' });
-    }
-    return res.sendFile(path.join(clientBuildPath, 'index.html'));
-  });
-}
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`API Base URL: http://localhost:${PORT}/api`);

@@ -48,9 +48,6 @@ const SHOULD_EXPOSE_VERIFICATION_CODE = process.env.NODE_ENV !== 'production' &&
 const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
 
-const multer = require("multer");
-const path = require("path");
-
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");

@@ -50,6 +50,7 @@ const ORDER_PAYMENT_CURRENCY = 'INR';
 
 const { v2: cloudinary } = require("cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary").CloudinaryStorage;
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,

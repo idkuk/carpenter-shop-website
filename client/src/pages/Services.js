@@ -199,22 +199,18 @@ const Services = () => {
                 </div>
 
                 <div className="service-actions">
-                  {!isStaff && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-order"
-                        onClick={() => handleOrderNow(service)}
-                      >
-                        <FaShoppingCart />
-                        <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
-                      </button>
-                      <button className="btn-cart" onClick={() => handleAddToCart(service)}>
-                        <FaCartPlus />
-                        <span>Add to Cart</span>
-                      </button>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    className="btn-order"
+                    onClick={() => handleOrderNow(service)}
+                  >
+                    <FaShoppingCart />
+                    <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
+                  </button>
+                  <button className="btn-cart" onClick={() => handleAddToCart(service)}>
+                    <FaCartPlus />
+                    <span>Add to Cart</span>
+                  </button>
                   <button className="btn-view" onClick={() => handleViewDetails(service)}>
                     <FaEye />
                     <span>View Details</span>
@@ -290,31 +286,27 @@ const Services = () => {
               </div>
 
               <div className="service-modal-actions">
-                {!isStaff && (
-                  <>
-                    <button
-                      type="button"
-                      className="btn-order"
-                      onClick={() => {
-                        handleOrderNow(selectedService);
-                        closeModal();
-                      }}
-                    >
-                      <FaShoppingCart />
-                      <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
-                    </button>
-                    <button
-                      className="btn-cart"
-                      onClick={() => {
-                        handleAddToCart(selectedService);
-                        closeModal();
-                      }}
-                    >
-                      <FaCartPlus />
-                      <span>Add to Cart</span>
-                    </button>
-                  </>
-                )}
+                <button
+                  type="button"
+                  className="btn-order"
+                  onClick={() => {
+                    handleOrderNow(selectedService);
+                    closeModal();
+                  }}
+                >
+                  <FaShoppingCart />
+                  <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
+                </button>
+                <button
+                  className="btn-cart"
+                  onClick={() => {
+                    handleAddToCart(selectedService);
+                    closeModal();
+                  }}
+                >
+                  <FaCartPlus />
+                  <span>Add to Cart</span>
+                </button>
                 <button className="service-modal-close" onClick={closeModal}>
                   Close
                 </button>

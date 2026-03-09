@@ -10,7 +10,6 @@ const https = require('https');
 const querystring = require('querystring');
 const path = require('path');
 const fs = require('fs');
-const compression = require('compression');
 require('dotenv').config();
 
 const app = express();
@@ -68,7 +67,6 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"]
 };
 
-app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -703,15 +701,9 @@ const sampleServices = [
   }
 ];
 
-// MongoDB Connection with optimized settings
+// MongoDB Connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/carpenter_shop';
-mongoose.connect(mongoUri, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true,
-  maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-})
+mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(async () => {
     console.log('Connected to MongoDB');
     await seedAdmin();
@@ -724,32 +716,6 @@ mongoose.connect(mongoUri, {
 // Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Carpenter Shop API is running' });
-});
-
-// Test email configuration endpoint
-app.get('/api/test-email', async (req, res) => {
-  try {
-    if (!EMAIL_ENABLED) {
-      return res.status(400).json({ 
-        status: '❌ Email not configured', 
-        message: 'Set SMTP_* environment variables' 
-      });
-    }
-
-    const transporter = getEmailTransporter();
-    await transporter.verify();
-    
-    res.json({ 
-      status: '✅ Email configuration valid',
-      provider: SMTP_HOST,
-      user: SMTP_USER
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: '❌ Email configuration invalid', 
-      error: error.message 
-    });
-  }
 });
 
 // Auth Routes

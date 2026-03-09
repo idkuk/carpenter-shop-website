@@ -991,11 +991,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       }
     }
 
-    const response = {
-      message: 'If an account exists, a reset link has been sent.'
-    };
-
-    res.json(response);
+    res.json({
+    message: 'Reset link generated',
+    resetUrl
+  });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

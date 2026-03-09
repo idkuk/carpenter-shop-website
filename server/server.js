@@ -48,24 +48,27 @@ const SHOULD_EXPOSE_VERIFICATION_CODE = process.env.NODE_ENV !== 'production' &&
 const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
 
-const { v2: cloudinary } = require("cloudinary");
-const { CloudinaryStorage } = require("multer-storage-cloudinary").CloudinaryStorage;
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
+// configure cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME,
-  api_key: process.env.CLOUDINARY_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// set up storage
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "carpenter-shop",
-    allowed_formats: ["jpg", "jpeg", "png"]
-  }
+    folder: 'carpenter-shop',
+    allowed_formats: ['jpg','jpeg','png'],
+  },
 });
 
-const upload = multer({ storage });
+// initialize multer
+const upload = multer({ storage: storage });
 
 app.use(cors({
   origin: "*",

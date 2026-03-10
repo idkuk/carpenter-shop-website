@@ -23,7 +23,7 @@ const Register = () => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleChange = (event) => {
@@ -34,8 +34,8 @@ const Register = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
-      toast.error('Name, email, and phone are required');
+    if (!formData.name.trim() || !formData.email.trim()) {
+      toast.error('Name and email are required');
       return;
     }
 
@@ -70,7 +70,6 @@ const Register = () => {
     navigate('/verify-contact', {
       state: {
         email: response.email || formData.email.trim(),
-        verificationChannel: response.verificationChannel || 'email',
         verificationMessage: response.message || 'Verification code sent.',
         devVerificationCode: response.devVerificationCode
       }
@@ -123,7 +122,7 @@ const Register = () => {
           <div className="form-group">
             <label htmlFor="phone">
               <FaPhone className="input-icon" />
-              Phone Number
+              Phone Number (Optional)
             </label>
             <input
               type="tel"
@@ -133,7 +132,6 @@ const Register = () => {
               onChange={handleChange}
               placeholder="Enter your phone number"
               autoComplete="tel"
-              required
             />
           </div>
 
@@ -211,7 +209,7 @@ const Register = () => {
           <div className="sidebar-features">
             <div className="feature"><span className="feature-dot"></span>Custom furniture requests</div>
             <div className="feature"><span className="feature-dot"></span>Order timeline visibility</div>
-            <div className="feature"><span className="feature-dot"></span>Email/WhatsApp verification support</div>
+            <div className="feature"><span className="feature-dot"></span>Email verification support</div>
           </div>
         </div>
       </div>

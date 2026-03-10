@@ -87,9 +87,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const sendVerificationCode = async (email, channel = 'email') => {
+  const sendVerificationCode = async (email) => {
     try {
-      const response = await authService.sendVerificationCode(email, channel);
+      const response = await authService.sendVerificationCode(email);
       return { success: true, data: response };
     } catch (error) {
       return {

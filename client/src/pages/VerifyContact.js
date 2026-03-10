@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { FaEnvelope, FaLock, FaPaperPlane, FaRedo, FaSms } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaPaperPlane, FaRedo } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
@@ -13,7 +13,6 @@ const VerifyContact = () => {
   const initialState = location.state || {};
   const [email, setEmail] = useState(initialState.email || '');
   const [code, setCode] = useState('');
-  const [channel, setChannel] = useState(initialState.verificationChannel || 'email');
   const [verificationMessage, setVerificationMessage] = useState(initialState.verificationMessage || '');
   const [devCode, setDevCode] = useState(initialState.devVerificationCode || '');
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +23,7 @@ const VerifyContact = () => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleVerify = async (event) => {
@@ -41,7 +40,7 @@ const VerifyContact = () => {
 
     if (result.success) {
       toast.success(result.data?.message || 'Verification successful');
-      navigate('/dashboard');
+      navigate('/');
       return;
     }
 
@@ -55,7 +54,7 @@ const VerifyContact = () => {
     }
 
     setResending(true);
-    const result = await sendVerificationCode(email.trim(), channel);
+    const result = await sendVerificationCode(email.trim());
     setResending(false);
 
     if (!result.success) {
@@ -65,7 +64,6 @@ const VerifyContact = () => {
 
     const response = result.data || {};
     setVerificationMessage(response.message || 'Verification code sent');
-    setChannel(response.verificationChannel || channel);
     setDevCode(response.devVerificationCode || '');
     toast.success(response.message || 'Verification code sent');
   };
@@ -75,7 +73,7 @@ const VerifyContact = () => {
       <div className="auth-card">
         <div className="auth-header">
           <h2>Verify Your Account</h2>
-          <p>Enter the code sent to your email/WhatsApp to activate login.</p>
+          <p>Enter the code sent to your email to activate login.</p>
         </div>
 
         {verificationMessage && (
@@ -122,22 +120,6 @@ const VerifyContact = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="channel">
-              <FaSms className="input-icon" />
-              Resend Channel
-            </label>
-            <select
-              id="channel"
-              name="channel"
-              value={channel}
-              onChange={(event) => setChannel(event.target.value)}
-            >
-              <option value="email">Email</option>
-              <option value="whatsapp">WhatsApp</option>
-            </select>
-          </div>
-
           <button type="submit" className="auth-btn" disabled={submitting}>
             {submitting ? 'Verifying...' : <>Verify Account <FaPaperPlane /></>}
           </button>
@@ -168,7 +150,7 @@ const VerifyContact = () => {
           </p>
           <div className="sidebar-features">
             <div className="feature"><span className="feature-dot"></span>Secure code expiry window</div>
-            <div className="feature"><span className="feature-dot"></span>Email and WhatsApp delivery</div>
+            <div className="feature"><span className="feature-dot"></span>Email delivery only</div>
             <div className="feature"><span className="feature-dot"></span>Instant access after verification</div>
           </div>
         </div>

@@ -19,7 +19,7 @@ const Login = () => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleChange = (event) => {
@@ -41,7 +41,7 @@ const Login = () => {
 
     if (result.success) {
       toast.success(result.data?.message || 'Login successful');
-      navigate('/dashboard');
+      navigate('/');
       return;
     }
 
@@ -49,7 +49,6 @@ const Login = () => {
       navigate('/verify-contact', {
         state: {
           email: result.email || formData.email.trim(),
-          verificationChannel: result.verificationChannel || 'email',
           verificationMessage: result.verificationMessage || result.error,
           devVerificationCode: result.devVerificationCode
         }

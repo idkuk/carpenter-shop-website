@@ -349,6 +349,11 @@
   color: var(--warning);
 }
 
+.cancel-requested.rejected {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
 .project-done {
   min-width: 140px;
 }
@@ -445,6 +450,11 @@
 .action-btn.cancel {
   background: var(--warning-bg);
   color: var(--warning);
+}
+
+.action-btn.reject {
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .action-btn.print {

@@ -3,14 +3,22 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaArrowLeft, FaBox, FaUser, FaClock, FaTags, FaMoneyBillWave, FaEdit, FaExclamationTriangle, FaBan, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaBox, FaUser, FaClock, FaTags, FaMoneyBillWave, FaEdit, FaExclamationTriangle, FaBan, FaCheckCircle, FaTimes } from 'react-icons/fa';
+import { getAssetUrl } from '../utils/url';
 import './OrderDetails.css';
 
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getOrderById, updateOrderStatus, requestCancellation, approveCancellation, loading } = useOrders();
+  const {
+    getOrderById,
+    updateOrderStatus,
+    requestCancellation,
+    approveCancellation,
+    rejectCancellation,
+    loading
+  } = useOrders();
   const [order, setOrder] = useState(null);
   const [status, setStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -56,6 +64,20 @@ const OrderDetails = () => {
   const canRequestCancellation = !isStaff && order && !['completed', 'delivered', 'cancelled'].includes(order.status) && cancellationStatus !== 'pending';
   const canApproveCancellation = isStaff && cancellationStatus === 'pending';
 
+  const handleEmailAwareSuccess = (message, data) => {
+    if (data?.emailSent === false && data?.emailError) {
+      toast.warning(`${message}, but email failed: ${data.emailError}`);
+      return;
+    }
+
+    if (data?.emailSent) {
+      toast.success(`${message} & Email Sent`);
+      return;
+    }
+
+    toast.success(message);
+  };
+
   const handleRequestCancellation = async () => {
     if (!window.confirm('Send a cancellation request to admin?')) {
       return;
@@ -77,15 +99,40 @@ const OrderDetails = () => {
     if (!window.confirm('Approve cancellation and cancel this order?')) {
       return;
     }
+    const note = window.prompt('Optional note for the customer (leave blank to skip):', '');
+    if (note === null) {
+      return;
+    }
     setIsSubmittingCancel(true);
-    const result = await approveCancellation(id);
+    const result = await approveCancellation(id, note.trim());
     if (result.success) {
       const updatedOrder = result.data?.order || result.data;
-      toast.success('Cancellation approved');
+      handleEmailAwareSuccess('Cancellation approved', result.data);
       setOrder(updatedOrder);
       setStatus(updatedOrder.status);
     } else {
       toast.error(result.error || 'Failed to approve cancellation');
+    }
+    setIsSubmittingCancel(false);
+  };
+
+  const handleRejectCancellation = async () => {
+    if (!window.confirm('Reject this cancellation request?')) {
+      return;
+    }
+    const note = window.prompt('Optional note for the customer (recommended):', '');
+    if (note === null) {
+      return;
+    }
+    setIsSubmittingCancel(true);
+    const result = await rejectCancellation(id, note.trim());
+    if (result.success) {
+      const updatedOrder = result.data?.order || result.data;
+      handleEmailAwareSuccess('Cancellation rejected', result.data);
+      setOrder(updatedOrder);
+      setStatus(updatedOrder.status);
+    } else {
+      toast.error(result.error || 'Failed to reject cancellation');
     }
     setIsSubmittingCancel(false);
   };
@@ -115,6 +162,9 @@ const OrderDetails = () => {
           </div>
           {cancellationStatus === 'pending' && (
             <div className="status-sub-badge">Cancellation Requested</div>
+          )}
+          {cancellationStatus === 'rejected' && (
+            <div className="status-sub-badge rejected">Cancellation Rejected</div>
           )}
         </div>
       </div>
@@ -148,8 +198,7 @@ const OrderDetails = () => {
               <h3>Images</h3>
               <div className="images-grid">
                 {order.images.map((img, index) => {
-                  const imgSrc = img.startsWith('http') ? img : `${(process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '')}${img}`;
-                  return <img key={index} src={imgSrc} alt={`Order attachment ${index + 1}`} className="order-image" />;
+                  return <img key={index} src={getAssetUrl(img)} alt={`Order attachment ${index + 1}`} className="order-image" />;
                 })}
               </div>
             </div>
@@ -216,6 +265,20 @@ const OrderDetails = () => {
                 <p className="cancel-note">This order has already been cancelled.</p>
               ) : cancellationStatus === 'pending' ? (
                 <p className="cancel-note">Cancellation request is pending admin approval.</p>
+              ) : cancellationStatus === 'rejected' ? (
+                <>
+                  <p className="cancel-note">
+                    Your last cancellation request was declined.
+                    {order.cancellationRequest?.resolutionNote ? ` Note: ${order.cancellationRequest.resolutionNote}` : ''}
+                  </p>
+                  <button
+                    className="cancel-btn full-width"
+                    onClick={handleRequestCancellation}
+                    disabled={!canRequestCancellation || isSubmittingCancel}
+                  >
+                    {isSubmittingCancel ? 'Sending...' : <><FaBan /> Request Cancellation Again</>}
+                  </button>
+                </>
               ) : !['completed', 'delivered'].includes(order.status) ? (
                 <button
                   className="cancel-btn full-width"
@@ -242,13 +305,25 @@ const OrderDetails = () => {
               {order.cancellationRequest?.reason && (
                 <p className="cancel-note">Reason: {order.cancellationRequest.reason}</p>
               )}
-              <button
-                className="approve-btn full-width"
-                onClick={handleApproveCancellation}
-                disabled={!canApproveCancellation || isSubmittingCancel}
-              >
-                {isSubmittingCancel ? 'Approving...' : <><FaCheckCircle /> Approve Cancellation</>}
-              </button>
+              {order.cancellationRequest?.resolutionNote && (
+                <p className="cancel-note">Team note: {order.cancellationRequest.resolutionNote}</p>
+              )}
+              <div className="decision-actions">
+                <button
+                  className="approve-btn full-width"
+                  onClick={handleApproveCancellation}
+                  disabled={!canApproveCancellation || isSubmittingCancel}
+                >
+                  {isSubmittingCancel ? 'Approving...' : <><FaCheckCircle /> Approve Cancellation</>}
+                </button>
+                <button
+                  className="reject-btn full-width"
+                  onClick={handleRejectCancellation}
+                  disabled={!canApproveCancellation || isSubmittingCancel}
+                >
+                  {isSubmittingCancel ? 'Rejecting...' : <><FaTimes /> Reject Cancellation</>}
+                </button>
+              </div>
             </div>
           )}
 

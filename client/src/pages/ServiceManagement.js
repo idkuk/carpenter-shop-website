@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaPlus, FaEdit, FaTrash, FaMagic, FaTools } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { serviceService } from '../services/api';
+import { getServiceAdditionalMediaList, getServiceMediaList, isVideoAsset, resolveServiceMediaAsset } from '../utils/serviceMedia';
 import './ServiceManagement.css';
 
 const emptyForm = {
@@ -16,6 +17,8 @@ const emptyForm = {
   features: '',
   active: true
 };
+
+const MAX_SERVICE_MEDIA = 5;
 
 const starterServices = [
   {
@@ -90,21 +93,13 @@ const ServiceManagement = () => {
   const [services, setServices] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [existingMedia, setExistingMedia] = useState([]);
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [mediaPreviews, setMediaPreviews] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
-
-  const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  const serverBase = apiBase.replace(/\/api$/, '');
-
-  const resolveImage = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return `${serverBase}${url}`;
-  };
 
   const loadServices = async () => {
     setLoading(true);
@@ -123,17 +118,22 @@ const ServiceManagement = () => {
   }, []);
 
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreview('');
+    if (mediaFiles.length === 0) {
+      setMediaPreviews([]);
       return undefined;
     }
 
-    const objectUrl = URL.createObjectURL(imageFile);
-    setImagePreview(objectUrl);
+    const previews = mediaFiles.map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      isVideo: file.type.startsWith('video/')
+    }));
+    setMediaPreviews(previews);
+
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      previews.forEach((item) => URL.revokeObjectURL(item.url));
     };
-  }, [imageFile]);
+  }, [mediaFiles]);
 
   const sortedServices = useMemo(() => {
     return [...services].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -150,8 +150,9 @@ const ServiceManagement = () => {
   const resetForm = () => {
     setFormData(emptyForm);
     setEditingId(null);
-    setImageFile(null);
-    setImagePreview('');
+    setExistingMedia([]);
+    setMediaFiles([]);
+    setMediaPreviews([]);
     setFileInputKey((prev) => prev + 1);
   };
 
@@ -169,12 +170,13 @@ const ServiceManagement = () => {
       timeline: data.timeline.trim(),
       rating: data.rating ? Number(data.rating) : undefined,
       image: data.image.trim(),
+      media: existingMedia,
       features,
       active: data.active
     };
   };
 
-  const toFormData = (data, file) => {
+  const toFormData = (data, files) => {
     const payload = toPayload(data);
     const form = new FormData();
     Object.entries(payload).forEach(([key, value]) => {
@@ -185,15 +187,34 @@ const ServiceManagement = () => {
       }
       form.append(key, value);
     });
-    if (file) {
-      form.append('image', file);
-    }
+    files.forEach((file) => form.append('mediaFiles', file));
     return form;
   };
 
-  const handleImageFileChange = (event) => {
-    const file = event.target.files?.[0];
-    setImageFile(file || null);
+  const handleMediaFilesChange = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    const remainingSlots = MAX_SERVICE_MEDIA - existingMedia.length - mediaFiles.length;
+
+    if (remainingSlots <= 0) {
+      toast.warning(`Only ${MAX_SERVICE_MEDIA} extra images or videos are allowed per service`);
+      event.target.value = '';
+      return;
+    }
+
+    if (selectedFiles.length > remainingSlots) {
+      toast.warning(`Only ${remainingSlots} more media file${remainingSlots === 1 ? '' : 's'} can be added`);
+    }
+
+    setMediaFiles((prev) => [...prev, ...selectedFiles.slice(0, remainingSlots)]);
+    event.target.value = '';
+  };
+
+  const removeExistingMedia = (index) => {
+    setExistingMedia((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const removePendingMedia = (index) => {
+    setMediaFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const handleSubmit = async (event) => {
@@ -204,7 +225,7 @@ const ServiceManagement = () => {
     }
 
     setSaving(true);
-    const payload = imageFile ? toFormData(formData, imageFile) : toPayload(formData);
+    const payload = mediaFiles.length > 0 ? toFormData(formData, mediaFiles) : toPayload(formData);
     try {
       if (editingId) {
         await serviceService.updateService(editingId, payload);
@@ -235,8 +256,9 @@ const ServiceManagement = () => {
       features: Array.isArray(service.features) ? service.features.join(', ') : '',
       active: service.active !== false
     });
-    setImageFile(null);
-    setImagePreview('');
+    setExistingMedia(getServiceAdditionalMediaList(service));
+    setMediaFiles([]);
+    setMediaPreviews([]);
     setFileInputKey((prev) => prev + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -278,6 +300,21 @@ const ServiceManagement = () => {
     } finally {
       setSeeding(false);
     }
+  };
+
+  const renderMediaPreview = (src, label) => {
+    if (isVideoAsset(src)) {
+      return (
+        <video
+          src={resolveServiceMediaAsset(src)}
+          controls
+          muted
+          playsInline
+        />
+      );
+    }
+
+    return <img src={resolveServiceMediaAsset(src)} alt={label} />;
   };
 
   return (
@@ -378,38 +415,94 @@ const ServiceManagement = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Image URL</label>
+                <label>Primary Media URL</label>
                 <input
                   type="text"
                   name="image"
                   value={formData.image}
                   onChange={handleChange}
-                  placeholder="https://..."
+                  placeholder="https://... (image or video)"
                 />
               </div>
             </div>
 
             <div className="form-group">
-              <label>Or Upload Image File</label>
+              <label>Additional Images / Videos</label>
               <input
                 key={fileInputKey}
                 type="file"
-                accept="image/*"
-                onChange={handleImageFileChange}
+                accept="image/*,video/*"
+                multiple
+                onChange={handleMediaFilesChange}
               />
               <small>
-                If both are added, uploaded file will be used.
+                Add up to {MAX_SERVICE_MEDIA} extra images or videos for the service gallery.
               </small>
             </div>
 
-            {(imagePreview || formData.image) && (
+            <div className="media-counter">
+              Additional gallery media: {existingMedia.length + mediaFiles.length}/{MAX_SERVICE_MEDIA}
+            </div>
+
+            {(formData.image || existingMedia.length > 0 || mediaPreviews.length > 0) && (
               <div className="form-group">
-                <label>Image Preview</label>
-                <img
-                  src={imagePreview || resolveImage(formData.image)}
-                  alt="Service preview"
-                  style={{ width: '180px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }}
-                />
+                <label>Media Preview</label>
+                <div className="service-media-preview-stack">
+                  {formData.image && (
+                    <div className="service-media-section">
+                      <span className="service-media-label">Primary media</span>
+                      <div className="service-media-grid single">
+                        <div className="service-media-card">
+                          {renderMediaPreview(formData.image, 'Primary service media')}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {existingMedia.length > 0 && (
+                    <div className="service-media-section">
+                      <span className="service-media-label">Existing gallery items</span>
+                      <div className="service-media-grid">
+                        {existingMedia.map((mediaItem, index) => (
+                          <div key={`${mediaItem}-${index}`} className="service-media-card removable">
+                            {renderMediaPreview(mediaItem, `Existing service media ${index + 1}`)}
+                            <button
+                              type="button"
+                              className="remove-media-btn"
+                              onClick={() => removeExistingMedia(index)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mediaPreviews.length > 0 && (
+                    <div className="service-media-section">
+                      <span className="service-media-label">New uploads</span>
+                      <div className="service-media-grid">
+                        {mediaPreviews.map((mediaItem, index) => (
+                          <div key={`${mediaItem.name}-${index}`} className="service-media-card removable">
+                            {mediaItem.isVideo ? (
+                              <video src={mediaItem.url} controls muted playsInline />
+                            ) : (
+                              <img src={mediaItem.url} alt={mediaItem.name} />
+                            )}
+                            <button
+                              type="button"
+                              className="remove-media-btn"
+                              onClick={() => removePendingMedia(index)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -457,10 +550,25 @@ const ServiceManagement = () => {
             <div className="service-list">
               {sortedServices.map((service) => (
                 <div className="service-row" key={service._id}>
-                  <img
-                    src={resolveImage(service.image) || 'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=300&q=80'}
-                    alt={service.name}
-                  />
+                  {getServiceMediaList(service)[0] ? (
+                    <div className="service-row-media">
+                      {isVideoAsset(getServiceMediaList(service)[0]) ? (
+                        <video
+                          src={resolveServiceMediaAsset(getServiceMediaList(service)[0])}
+                          muted
+                          playsInline
+                          controls
+                        />
+                      ) : (
+                        <img
+                          src={resolveServiceMediaAsset(getServiceMediaList(service)[0])}
+                          alt={service.name}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="service-row-media placeholder">No media</div>
+                  )}
                   <div className="service-row-content">
                     <h3>{service.name}</h3>
                     <p>{service.description || 'No description'}</p>
@@ -468,6 +576,7 @@ const ServiceManagement = () => {
                       <span>{service.category || 'uncategorized'}</span>
                       <span>{service.price || 'Price on request'}</span>
                       <span>{service.timeline || 'Timeline TBA'}</span>
+                      <span>{getServiceMediaList(service).length} media</span>
                       <span>{service.active === false ? 'Inactive' : 'Active'}</span>
                     </div>
                   </div>

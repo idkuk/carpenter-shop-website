@@ -126,6 +126,19 @@ export const OrderProvider = ({ children }) => {
     }
   };
 
+  const rejectCancellation = async (id, note) => {
+    try {
+      const response = await orderService.rejectCancellation(id, note);
+      const updatedOrder = response.order || response.data || response;
+      setOrders((prev) => prev.map((order) =>
+        order._id === id ? updatedOrder : order
+      ));
+      return { success: true, data: response };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.message || err.message };
+    }
+  };
+
   const cancelOrder = async (id) => {
     try {
       const response = await orderService.cancelOrder(id);
@@ -151,6 +164,7 @@ export const OrderProvider = ({ children }) => {
     updateOrderStatus,
     requestCancellation,
     approveCancellation,
+    rejectCancellation,
     cancelOrder
   };
 

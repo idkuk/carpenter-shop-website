@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaBed, FaChair, FaTable, FaDoorClosed,
   FaSearch, FaFilter, FaStar, FaClock,
-  FaShoppingCart, FaEye, FaCartPlus
+  FaShoppingCart, FaEye, FaCartPlus, FaPhotoVideo
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { serviceService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { getServiceMediaList, isVideoAsset, resolveServiceMediaAsset } from '../utils/serviceMedia';
 import './Services.css';
 
 const Services = () => {
@@ -21,6 +22,7 @@ const Services = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
 
   const categories = [
     { id: 'all', name: 'All Categories', icon: <FaFilter /> },
@@ -60,20 +62,38 @@ const Services = () => {
     };
   }, [selectedService]);
 
+  useEffect(() => {
+    setSelectedMediaIndex(0);
+  }, [selectedService]);
+
   const formatPrice = (price) => {
     if (price === undefined || price === null || price === '') return 'Rs 0';
     if (typeof price === 'number') return `Rs ${price.toLocaleString()}`;
     return String(price);
   };
 
-  const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  const serverBase = apiBase.replace(/\/api$/, '');
   const placeholderImage = 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600';
+  const getServiceMedia = (service) => getServiceMediaList(service);
+  const resolveAsset = (url) => resolveServiceMediaAsset(url);
+  const renderMedia = ({ src, alt, className, muted = true, controls = false }) => {
+    if (!src) {
+      return <img src={placeholderImage} alt={alt} className={className} />;
+    }
 
-  const resolveImage = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return `${serverBase}${url}`;
+    if (isVideoAsset(src)) {
+      return (
+        <video
+          src={resolveAsset(src)}
+          className={className}
+          muted={muted}
+          controls={controls}
+          playsInline
+          preload="metadata"
+        />
+      );
+    }
+
+    return <img src={resolveAsset(src)} alt={alt} className={className} />;
   };
 
   const filteredServices = useMemo(() => {
@@ -107,7 +127,7 @@ const Services = () => {
       name: service.name,
       category: service.category,
       price: formatPrice(service.price),
-      image: resolveImage(service.image) || placeholderImage
+      image: resolveAsset(getServiceMedia(service)[0]) || placeholderImage
     });
   };
 
@@ -117,13 +137,12 @@ const Services = () => {
       navigate('/register');
       return;
     }
-    if (isStaff) {
-      navigate('/custom-order');
-      return;
-    }
     handleAddToCart(service);
     navigate('/cart');
   };
+
+  const selectedServiceMedia = selectedService ? getServiceMedia(selectedService) : [];
+  const activeSelectedMedia = selectedServiceMedia[selectedMediaIndex] || selectedServiceMedia[0] || '';
 
   return (
     <div className="services-container">
@@ -167,8 +186,18 @@ const Services = () => {
           filteredServices.map((service) => (
             <div key={service._id || service.id} className="service-card">
               <div className="service-image">
-                <img src={resolveImage(service.image) || placeholderImage} alt={service.name} />
+                {renderMedia({
+                  src: getServiceMedia(service)[0],
+                  alt: service.name,
+                  className: 'service-media-asset'
+                })}
                 <div className="service-badge">{service.category || 'custom'}</div>
+                {getServiceMedia(service).length > 1 && (
+                  <div className="service-media-count">
+                    <FaPhotoVideo />
+                    <span>{getServiceMedia(service).length}</span>
+                  </div>
+                )}
               </div>
 
               <div className="service-content">
@@ -199,18 +228,22 @@ const Services = () => {
                 </div>
 
                 <div className="service-actions">
-                  <button
-                    type="button"
-                    className="btn-order"
-                    onClick={() => handleOrderNow(service)}
-                  >
-                    <FaShoppingCart />
-                    <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
-                  </button>
-                  <button className="btn-cart" onClick={() => handleAddToCart(service)}>
-                    <FaCartPlus />
-                    <span>Add to Cart</span>
-                  </button>
+                  {!isStaff && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-order"
+                        onClick={() => handleOrderNow(service)}
+                      >
+                        <FaShoppingCart />
+                        <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
+                      </button>
+                      <button className="btn-cart" onClick={() => handleAddToCart(service)}>
+                        <FaCartPlus />
+                        <span>Add to Cart</span>
+                      </button>
+                    </>
+                  )}
                   <button className="btn-view" onClick={() => handleViewDetails(service)}>
                     <FaEye />
                     <span>View Details</span>
@@ -257,10 +290,13 @@ const Services = () => {
         <div className="service-modal-overlay" onClick={closeModal} role="dialog" aria-modal="true">
           <div className="service-modal" onClick={(event) => event.stopPropagation()}>
             <div className="service-modal-image">
-              <img
-                src={resolveImage(selectedService.image) || placeholderImage}
-                alt={selectedService.name}
-              />
+              {renderMedia({
+                src: activeSelectedMedia,
+                alt: selectedService.name,
+                className: 'service-modal-asset',
+                muted: false,
+                controls: isVideoAsset(activeSelectedMedia)
+              })}
             </div>
             <div className="service-modal-content">
               <div className="service-modal-header">
@@ -278,6 +314,28 @@ const Services = () => {
 
               <p className="service-description">{selectedService.description}</p>
 
+              {selectedServiceMedia.length > 1 && (
+                <div className="service-gallery">
+                  <h3>Gallery</h3>
+                  <div className="service-gallery-grid">
+                    {selectedServiceMedia.map((mediaItem, index) => (
+                      <button
+                        type="button"
+                        key={`${mediaItem}-${index}`}
+                        className={`service-gallery-item ${selectedMediaIndex === index ? 'active' : ''}`}
+                        onClick={() => setSelectedMediaIndex(index)}
+                      >
+                        {renderMedia({
+                          src: mediaItem,
+                          alt: `${selectedService.name} gallery ${index + 1}`,
+                          className: 'service-gallery-thumb'
+                        })}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="service-features">
                 {(Array.isArray(selectedService.features) ? selectedService.features : selectedService.features ? [selectedService.features] : [])
                   .map((feature, index) => (
@@ -286,27 +344,31 @@ const Services = () => {
               </div>
 
               <div className="service-modal-actions">
-                <button
-                  type="button"
-                  className="btn-order"
-                  onClick={() => {
-                    handleOrderNow(selectedService);
-                    closeModal();
-                  }}
-                >
-                  <FaShoppingCart />
-                  <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
-                </button>
-                <button
-                  className="btn-cart"
-                  onClick={() => {
-                    handleAddToCart(selectedService);
-                    closeModal();
-                  }}
-                >
-                  <FaCartPlus />
-                  <span>Add to Cart</span>
-                </button>
+                {!isStaff && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-order"
+                      onClick={() => {
+                        handleOrderNow(selectedService);
+                        closeModal();
+                      }}
+                    >
+                      <FaShoppingCart />
+                      <span>{isLoggedIn ? 'Order Now' : 'Register to Order'}</span>
+                    </button>
+                    <button
+                      className="btn-cart"
+                      onClick={() => {
+                        handleAddToCart(selectedService);
+                        closeModal();
+                      }}
+                    >
+                      <FaCartPlus />
+                      <span>Add to Cart</span>
+                    </button>
+                  </>
+                )}
                 <button className="service-modal-close" onClick={closeModal}>
                   Close
                 </button>

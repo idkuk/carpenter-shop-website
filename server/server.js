@@ -6,8 +6,6 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const https = require('https');
-const querystring = require('querystring');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
@@ -35,22 +33,23 @@ const EMAIL_ENABLED = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM);
 const VERIFICATION_CODE_LENGTH = Number.parseInt(process.env.VERIFICATION_CODE_LENGTH || '6', 10) || 6;
 const VERIFICATION_CODE_TTL_MINUTES = Number.parseInt(process.env.VERIFICATION_CODE_TTL_MINUTES || '10', 10) || 10;
 const VERIFICATION_CODE_EXPOSE = process.env.NODE_ENV !== 'production' && process.env.VERIFICATION_CODE_EXPOSE === 'true';
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_WHATSAPP_FROM = process.env.TWILIO_WHATSAPP_FROM;
-const WHATSAPP_ENABLED = Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_WHATSAPP_FROM);
 const parsedMaxUploadMb = Number.parseInt(process.env.MAX_UPLOAD_FILE_MB || '15', 10);
 const MAX_UPLOAD_FILE_MB = Number.isNaN(parsedMaxUploadMb) || parsedMaxUploadMb <= 0 ? 15 : parsedMaxUploadMb;
 const MAX_UPLOAD_FILE_SIZE = MAX_UPLOAD_FILE_MB * 1024 * 1024;
+const MAX_SERVICE_MEDIA_FILES = 5;
 const SHOULD_EXPOSE_VERIFICATION_CODE = process.env.NODE_ENV !== 'production' && (
-  VERIFICATION_CODE_EXPOSE || (!EMAIL_ENABLED && !WHATSAPP_ENABLED)
+  VERIFICATION_CODE_EXPOSE || !EMAIL_ENABLED
 );
 const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
+const EMAIL_NOT_CONFIGURED_MESSAGE = 'Email notifications are not configured on the server';
+const uploadsDir = path.join(__dirname, 'uploads');
+
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     const uniqueName = Date.now() + "-" + file.originalname;
@@ -58,7 +57,27 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const createUploader = (fileFilter) => multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_FILE_SIZE },
+  fileFilter
+});
+
+const imageUpload = createUploader((req, file, cb) => {
+  if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+    cb(new Error('Only image files are allowed'));
+    return;
+  }
+  cb(null, true);
+});
+
+const serviceMediaUpload = createUploader((req, file, cb) => {
+  if (!file.mimetype || (!file.mimetype.startsWith('image/') && !file.mimetype.startsWith('video/'))) {
+    cb(new Error('Only image or video files are allowed'));
+    return;
+  }
+  cb(null, true);
+});
 
 const corsOptions = {
   origin: "*",
@@ -70,6 +89,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(uploadsDir));
 
 // Schemas
 const userSchema = new mongoose.Schema({
@@ -80,7 +100,7 @@ const userSchema = new mongoose.Schema({
   address: String,
   role: { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
   contactVerified: { type: Boolean, default: false },
-  contactVerificationChannel: { type: String, enum: ['email', 'whatsapp'], default: 'email' },
+  contactVerificationChannel: { type: String, default: 'email' },
   contactVerificationCode: String,
   contactVerificationExpires: Date,
   contactVerificationAttempts: { type: Number, default: 0 },
@@ -150,6 +170,7 @@ const serviceSchema = new mongoose.Schema({
   timeline: String,
   rating: Number,
   image: String,
+  media: [String],
   features: [String],
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
@@ -221,6 +242,12 @@ const parseArray = (value) => {
   return [];
 };
 
+const parseStringArray = (value) => parseArray(value)
+  .map((item) => String(item || '').trim())
+  .filter(Boolean);
+
+const dedupeArray = (items) => [...new Set(items)];
+
 const formatStatusLabel = (value) => {
   if (!value) return '';
   return value
@@ -243,42 +270,6 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 const getResetTokenExpiry = () => new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
 const getVerificationCodeExpiry = () => new Date(Date.now() + VERIFICATION_CODE_TTL_MINUTES * 60 * 1000);
 let emailTransporter;
-
-const postFormRequest = ({ hostname, path: requestPath, auth, data }) => new Promise((resolve, reject) => {
-  const payload = querystring.stringify(data);
-  const request = https.request({
-    hostname,
-    path: requestPath,
-    method: 'POST',
-    auth,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Content-Length': Buffer.byteLength(payload)
-    }
-  }, (response) => {
-    let body = '';
-    response.on('data', (chunk) => { body += chunk; });
-    response.on('end', () => {
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        resolve(body);
-      } else {
-        reject(new Error(`HTTP ${response.statusCode}: ${body}`));
-      }
-    });
-  });
-
-  request.on('error', reject);
-  request.write(payload);
-  request.end();
-});
-
-const normalizePhone = (value) => {
-  if (!value) return '';
-  const cleaned = String(value).trim().replace(/[^+\d]/g, '');
-  if (!cleaned) return '';
-  if (cleaned.startsWith('+')) return cleaned;
-  return `+${cleaned}`;
-};
 
 const createVerificationCode = () => {
   const max = 10 ** VERIFICATION_CODE_LENGTH;
@@ -339,7 +330,7 @@ const sendOrderStatusEmail = async ({ to, name, orderTitle, status }) => {
   const transporter = getEmailTransporter();
   if (!transporter) {
     console.warn('Email not configured. Set SMTP_* env vars to enable order status emails.');
-    return;
+    return false;
   }
 
   const subject = `Order status update: ${orderTitle}`;
@@ -367,6 +358,8 @@ const sendOrderStatusEmail = async ({ to, name, orderTitle, status }) => {
     text,
     html
   });
+
+  return true;
 };
 
 const sendGenericCustomerEmail = async ({ to, name, title, message }) => {
@@ -400,58 +393,43 @@ const sendGenericCustomerEmail = async ({ to, name, title, message }) => {
   return true;
 };
 
-const sendWhatsAppMessage = async ({ to, body }) => {
-  if (!WHATSAPP_ENABLED) {
-    console.warn('WhatsApp not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM.');
-    return false;
-  }
+const buildCancellationDecisionMessage = ({ orderTitle, approved, note }) => {
+  const message = approved
+    ? `Your cancellation request for order "${orderTitle}" has been approved.`
+    : `Your cancellation request for order "${orderTitle}" has been declined.`;
 
-  const normalizedTo = normalizePhone(to);
-  if (!normalizedTo) {
-    return false;
-  }
-
-  await postFormRequest({
-    hostname: 'api.twilio.com',
-    path: `/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
-    auth: `${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`,
-    data: {
-      To: `whatsapp:${normalizedTo}`,
-      From: `whatsapp:${TWILIO_WHATSAPP_FROM}`,
-      Body: body
-    }
-  });
-
-  return true;
+  return note ? `${message} Note from our team: ${note}` : message;
 };
 
-const generateAndStoreVerificationCode = async (user, channel = 'email') => {
+const attemptCustomerEmail = async (sendOperation, errorLabel) => {
+  try {
+    const sent = await sendOperation();
+    if (sent) {
+      return { emailSent: true, emailError: null };
+    }
+
+    return { emailSent: false, emailError: EMAIL_NOT_CONFIGURED_MESSAGE };
+  } catch (error) {
+    if (errorLabel) {
+      console.error(errorLabel, error);
+    }
+    return { emailSent: false, emailError: error.message };
+  }
+};
+
+const generateAndStoreVerificationCode = async (user) => {
   const code = createVerificationCode();
   user.contactVerificationCode = hashToken(code);
   user.contactVerificationExpires = getVerificationCodeExpiry();
   user.contactVerificationAttempts = 0;
-  user.contactVerificationChannel = channel;
+  user.contactVerificationChannel = 'email';
   await user.save();
   return code;
 };
 
-const sendVerificationCode = async ({ user, channel = 'email', code }) => {
-  const finalCode = code || await generateAndStoreVerificationCode(user, channel);
+const sendVerificationCode = async ({ user, code }) => {
+  const finalCode = code || await generateAndStoreVerificationCode(user);
   const minutes = VERIFICATION_CODE_TTL_MINUTES;
-
-  if (channel === 'whatsapp') {
-    if (!user.phone) {
-      throw new Error('Phone number is required for WhatsApp verification');
-    }
-    const sentViaWhatsapp = await sendWhatsAppMessage({
-      to: user.phone,
-      body: `Carpenter Shop verification code: ${finalCode}. Valid for ${minutes} minutes.`
-    });
-    if (!sentViaWhatsapp) {
-      throw new Error('WhatsApp verification is not configured');
-    }
-    return finalCode;
-  }
 
   if (!user.email) {
     throw new Error('Email is required for email verification');
@@ -469,7 +447,7 @@ const sendVerificationCode = async ({ user, channel = 'email', code }) => {
   return finalCode;
 };
 
-const sendCustomerNotificationChannels = async ({ customer, title, message, sendEmail = true, sendWhatsapp = true }) => {
+const sendCustomerNotificationChannels = async ({ customer, title, message, sendEmail = true }) => {
   if (!customer) return;
 
   if (sendEmail && customer.email) {
@@ -482,17 +460,6 @@ const sendCustomerNotificationChannels = async ({ customer, title, message, send
       });
     } catch (emailError) {
       console.error('Failed to send customer notification email:', emailError);
-    }
-  }
-
-  if (sendWhatsapp && customer.phone) {
-    try {
-      await sendWhatsAppMessage({
-        to: customer.phone,
-        body: `${title || 'Carpenter Shop update'}: ${message || ''}`.trim()
-      });
-    } catch (waError) {
-      console.error('Failed to send customer WhatsApp notification:', waError);
     }
   }
 };
@@ -723,8 +690,8 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, phone, address } = req.body;
 
-    if (!name || !email || !password || !phone) {
-      return res.status(400).json({ message: 'Name, email, password, and phone are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -738,7 +705,7 @@ app.post('/api/auth/register', async (req, res) => {
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
-      phone,
+      phone: phone || '',
       address,
       role: 'customer',
       contactVerified: false
@@ -746,16 +713,13 @@ app.post('/api/auth/register', async (req, res) => {
 
     await user.save();
 
-    const preferredChannel = EMAIL_ENABLED ? 'email' : ((WHATSAPP_ENABLED && user.phone) ? 'whatsapp' : 'email');
-    const code = await generateAndStoreVerificationCode(user, preferredChannel);
+    const code = await generateAndStoreVerificationCode(user);
     let deliveryMessage = 'Verification code generated.';
     let deliveryFailed = false;
 
     try {
-      await sendVerificationCode({ user, channel: preferredChannel, code });
-      deliveryMessage = preferredChannel === 'whatsapp'
-        ? 'Verification code sent to your WhatsApp number.'
-        : 'Verification code sent to your email.';
+      await sendVerificationCode({ user, code });
+      deliveryMessage = 'Verification code sent to your email.';
     } catch (sendError) {
       console.error('Failed to send verification code:', sendError);
       deliveryFailed = true;
@@ -767,7 +731,7 @@ app.post('/api/auth/register', async (req, res) => {
     const response = {
       message: `Registration successful. ${deliveryMessage}`,
       verificationRequired: true,
-      verificationChannel: preferredChannel,
+      verificationChannel: 'email',
       email: user.email,
       deliveryFailed
     };
@@ -802,16 +766,13 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     if (user.role === 'customer' && user.contactVerified === false) {
-      const preferredChannel = EMAIL_ENABLED ? 'email' : ((WHATSAPP_ENABLED && user.phone) ? 'whatsapp' : 'email');
-      const code = await generateAndStoreVerificationCode(user, preferredChannel);
+      const code = await generateAndStoreVerificationCode(user);
       let deliveryFailed = false;
       let verificationMessage = '';
 
       try {
-        await sendVerificationCode({ user, channel: preferredChannel, code });
-        verificationMessage = preferredChannel === 'whatsapp'
-          ? 'Verification code sent to your WhatsApp number.'
-          : 'Verification code sent to your email.';
+        await sendVerificationCode({ user, code });
+        verificationMessage = 'Verification code sent to your email.';
       } catch (sendError) {
         console.error('Failed to auto-send verification code during login:', sendError);
         deliveryFailed = true;
@@ -824,7 +785,7 @@ app.post('/api/auth/login', async (req, res) => {
         message: 'Please verify your account before login',
         requiresVerification: true,
         email: user.email,
-        verificationChannel: user.contactVerificationChannel || preferredChannel,
+        verificationChannel: 'email',
         deliveryFailed,
         verificationMessage
       };
@@ -852,7 +813,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/send-verification-code', async (req, res) => {
   try {
-    const { email, channel } = req.body;
+    const { email } = req.body;
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
@@ -870,19 +831,13 @@ app.post('/api/auth/send-verification-code', async (req, res) => {
       return res.json({ message: 'Account is already verified' });
     }
 
-    const requestedChannel = channel === 'whatsapp' ? 'whatsapp' : 'email';
-    const finalChannel = requestedChannel === 'whatsapp'
-      ? (WHATSAPP_ENABLED && user.phone ? 'whatsapp' : (EMAIL_ENABLED ? 'email' : 'whatsapp'))
-      : (EMAIL_ENABLED ? 'email' : ((WHATSAPP_ENABLED && user.phone) ? 'whatsapp' : 'email'));
-    const code = await generateAndStoreVerificationCode(user, finalChannel);
+    const code = await generateAndStoreVerificationCode(user);
 
     let deliveryFailed = false;
-    let deliveryMessage = finalChannel === 'whatsapp'
-      ? 'Verification code sent to WhatsApp.'
-      : 'Verification code sent to email.';
+    let deliveryMessage = 'Verification code sent to email.';
 
     try {
-      await sendVerificationCode({ user, channel: finalChannel, code });
+      await sendVerificationCode({ user, code });
     } catch (sendError) {
       console.error('Send verification code delivery error:', sendError);
       deliveryFailed = true;
@@ -894,7 +849,7 @@ app.post('/api/auth/send-verification-code', async (req, res) => {
 
     const response = {
       message: deliveryMessage,
-      verificationChannel: finalChannel,
+      verificationChannel: 'email',
       deliveryFailed
     };
 
@@ -1220,7 +1175,15 @@ app.get('/api/services/:id', requireObjectId('id'), async (req, res) => {
   }
 });
 
-app.post('/api/services', authMiddleware, requireRole('admin'), upload.single('image'), async (req, res) => {
+const serviceMediaMulter = (req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return serviceMediaUpload.array('mediaFiles', MAX_SERVICE_MEDIA_FILES)(req, res, next);
+  }
+  next();
+};
+
+app.post('/api/services', authMiddleware, requireRole('admin'), serviceMediaMulter, async (req, res) => {
   try {
     const { name, category, description, price, timeline, rating, image, active } = req.body;
     if (!name) {
@@ -1228,8 +1191,14 @@ app.post('/api/services', authMiddleware, requireRole('admin'), upload.single('i
     }
 
     const features = parseArray(req.body.features);
-    const uploadedImage = req.file ? `/uploads/${req.file.filename}` : undefined;
-    const resolvedImage = uploadedImage || image;
+    const uploadedMedia = (req.files || []).map((file) => `/uploads/${file.filename}`);
+    const requestedMedia = parseStringArray(req.body.media);
+    const resolvedMedia = dedupeArray([...requestedMedia, ...uploadedMedia]);
+    if (resolvedMedia.length > MAX_SERVICE_MEDIA_FILES) {
+      return res.status(400).json({ message: `You can upload up to ${MAX_SERVICE_MEDIA_FILES} service images or videos` });
+    }
+
+    const primaryImage = String(image || '').trim() || resolvedMedia[0] || undefined;
     const resolvedActive = active === undefined ? true : active === 'true' || active === true;
     const service = await Service.create({
       name,
@@ -1238,7 +1207,8 @@ app.post('/api/services', authMiddleware, requireRole('admin'), upload.single('i
       price,
       timeline,
       rating: parseNumber(rating),
-      image: resolvedImage,
+      image: primaryImage,
+      media: resolvedMedia,
       features,
       active: resolvedActive
     });
@@ -1250,23 +1220,44 @@ app.post('/api/services', authMiddleware, requireRole('admin'), upload.single('i
   }
 });
 
-app.put('/api/services/:id', authMiddleware, requireRole('admin'), requireObjectId('id'), upload.single('image'), async (req, res) => {
+app.put('/api/services/:id', authMiddleware, requireRole('admin'), requireObjectId('id'), serviceMediaMulter, async (req, res) => {
   try {
     const updates = { ...req.body };
+    const existingService = await Service.findById(req.params.id);
+    if (!existingService) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+
     if (updates.rating !== undefined) updates.rating = parseNumber(updates.rating);
     if (updates.features !== undefined) updates.features = parseArray(updates.features);
     if (updates.active !== undefined) {
       updates.active = updates.active === 'true' || updates.active === true;
     }
-    if (req.file) {
-      updates.image = `/uploads/${req.file.filename}`;
+    if (updates.image !== undefined) {
+      updates.image = String(updates.image || '').trim();
+    }
+    if (updates.media !== undefined || (req.files || []).length > 0) {
+      const uploadedMedia = (req.files || []).map((file) => `/uploads/${file.filename}`);
+      const requestedMedia = updates.media !== undefined
+        ? parseStringArray(updates.media)
+        : (Array.isArray(existingService.media) ? existingService.media : []);
+      const resolvedMedia = dedupeArray([...requestedMedia, ...uploadedMedia]);
+
+      if (resolvedMedia.length > MAX_SERVICE_MEDIA_FILES) {
+        return res.status(400).json({ message: `You can upload up to ${MAX_SERVICE_MEDIA_FILES} service images or videos` });
+      }
+
+      updates.media = resolvedMedia;
+      if (!updates.image) {
+        updates.image = resolvedMedia[0] || '';
+      }
+    }
+
+    if (updates.image === '') {
+      updates.image = updates.media?.[0] || '';
     }
 
     const service = await Service.findByIdAndUpdate(req.params.id, updates, { new: true });
-    if (!service) {
-      return res.status(404).json({ message: 'Service not found' });
-    }
-
     res.json({ message: 'Service updated successfully', service });
   } catch (error) {
     console.error('Update service error:', error);
@@ -1358,7 +1349,7 @@ app.get('/api/orders/:id', authMiddleware, requireObjectId('id'), async (req, re
 const orderCreateMulter = (req, res, next) => {
   const contentType = req.headers['content-type'] || '';
   if (contentType.includes('multipart/form-data')) {
-    return upload.array('images', 5)(req, res, next);
+    return imageUpload.array('images', 5)(req, res, next);
   }
   next();
 };
@@ -1454,6 +1445,19 @@ app.put('/api/orders/:id', authMiddleware, requireRole('admin', 'employee'), req
       updateData.completedAt = parsedCompletedAt || null;
     }
 
+    const hadPendingCancellation = updateData.status === 'cancelled' && existingOrder.cancellationRequest?.status === 'pending';
+    if (hadPendingCancellation) {
+      const currentCancellationRequest = existingOrder.cancellationRequest?.toObject
+        ? existingOrder.cancellationRequest.toObject()
+        : (existingOrder.cancellationRequest || {});
+      updateData.cancellationRequest = {
+        ...currentCancellationRequest,
+        status: 'approved',
+        resolvedAt: new Date(),
+        resolvedBy: req.user._id
+      };
+    }
+
     if (updateData.budget !== undefined && existingOrder.payment?.status !== 'paid') {
       const previousPayment = existingOrder.payment?.toObject ? existingOrder.payment.toObject() : (existingOrder.payment || {});
       updateData.payment = {
@@ -1474,37 +1478,51 @@ app.put('/api/orders/:id', authMiddleware, requireRole('admin', 'employee'), req
 
     if (updateData.status && updateData.status !== existingOrder.status) {
       const statusLabel = formatStatusLabel(updateData.status);
+      const notificationTitle = hadPendingCancellation ? 'Cancellation approved' : 'Order status updated';
+      const notificationMessage = hadPendingCancellation
+        ? buildCancellationDecisionMessage({ orderTitle: order.title, approved: true })
+        : `Your order "${order.title}" is now ${statusLabel}.`;
       const customerId = order.customerId?._id || order.customerId;
       await Notification.create({
         userId: customerId,
         orderId: order._id,
         type: 'order_status',
-        title: 'Order status updated',
-        message: `Your order "${order.title}" is now ${statusLabel}.`,
+        title: notificationTitle,
+        message: notificationMessage,
         statusFrom: existingOrder.status,
         statusTo: updateData.status
       });
 
       await sendCustomerNotificationChannels({
         customer: order.customerId,
-        title: 'Order status updated',
-        message: `Your order "${order.title}" is now ${statusLabel}.`,
+        title: notificationTitle,
+        message: notificationMessage,
         sendEmail: false
       });
 
       if (order.customerId?.email) {
-        try {
-          await sendOrderStatusEmail({
-            to: order.customerId.email,
-            name: order.customerId.name,
-            orderTitle: order.title,
-            status: statusLabel
-          });
-          emailSent = true;
-        } catch (sendError) {
-          console.error('Failed to send order status email:', sendError);
-          emailError = sendError.message;
-        }
+        const emailResult = hadPendingCancellation
+          ? await attemptCustomerEmail(
+            () => sendGenericCustomerEmail({
+              to: order.customerId.email,
+              name: order.customerId.name,
+              title: 'Cancellation approved',
+              message: notificationMessage
+            }),
+            'Failed to send cancellation approval email:'
+          )
+          : await attemptCustomerEmail(
+            () => sendOrderStatusEmail({
+              to: order.customerId.email,
+              name: order.customerId.name,
+              orderTitle: order.title,
+              status: statusLabel
+            }),
+            'Failed to send order status email:'
+          );
+
+        emailSent = emailResult.emailSent;
+        emailError = emailResult.emailError;
       }
     }
 
@@ -1630,44 +1648,116 @@ app.post('/api/orders/:id/cancel-approve', authMiddleware, requireRole('admin', 
 
     let emailSent = false;
     let emailError = null;
+    const notificationMessage = buildCancellationDecisionMessage({ orderTitle: order.title, approved: true, note });
 
     const customerId = order.customerId?._id || order.customerId;
     await Notification.create({
       userId: customerId,
       orderId: order._id,
       type: 'order_status',
-      title: 'Order Cancelled',
-      message: `Your order "${order.title}" has been cancelled.`,
+      title: 'Cancellation approved',
+      message: notificationMessage,
       statusFrom: previousStatus,
       statusTo: 'cancelled'
     });
 
     await sendCustomerNotificationChannels({
       customer: order.customerId,
-      title: 'Order cancelled',
-      message: `Your order "${order.title}" has been cancelled.`,
+      title: 'Cancellation approved',
+      message: notificationMessage,
       sendEmail: false
     });
 
     if (order.customerId?.email) {
-      try {
-        await sendOrderStatusEmail({
+      const emailResult = await attemptCustomerEmail(
+        () => sendGenericCustomerEmail({
           to: order.customerId.email,
           name: order.customerId.name,
-          orderTitle: order.title,
-          status: 'Cancelled'
-        });
-        emailSent = true;
-      } catch (sendError) {
-        console.error('Failed to send order status email:', sendError);
-        emailError = sendError.message;
-      }
+          title: 'Cancellation approved',
+          message: notificationMessage
+        }),
+        'Failed to send cancellation approval email:'
+      );
+
+      emailSent = emailResult.emailSent;
+      emailError = emailResult.emailError;
     }
 
     res.json({ message: 'Cancellation approved and order cancelled', order, emailSent, emailError });
   } catch (error) {
     console.error('Cancel approval error:', error);
     res.status(500).json({ message: 'Error approving cancellation', error: error.message });
+  }
+});
+
+app.post('/api/orders/:id/cancel-reject', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.cancellationRequest?.status !== 'pending') {
+      return res.status(400).json({ message: 'No pending cancellation request for this order' });
+    }
+
+    const note = typeof req.body.note === 'string' ? req.body.note.trim() : '';
+
+    order.updatedAt = Date.now();
+    order.cancellationRequest.status = 'rejected';
+    order.cancellationRequest.resolvedAt = new Date();
+    order.cancellationRequest.resolvedBy = req.user._id;
+    order.cancellationRequest.resolutionNote = note || undefined;
+
+    if (!order.notes) order.notes = [];
+    order.notes.push({
+      text: note ? `Cancellation rejected: ${note}` : 'Cancellation rejected by admin',
+      addedBy: req.user.name,
+      addedAt: new Date()
+    });
+
+    await order.save();
+
+    const notificationMessage = buildCancellationDecisionMessage({ orderTitle: order.title, approved: false, note });
+    const customerId = order.customerId?._id || order.customerId;
+
+    await Notification.create({
+      userId: customerId,
+      orderId: order._id,
+      type: 'order_update',
+      title: 'Cancellation declined',
+      message: notificationMessage
+    });
+
+    await sendCustomerNotificationChannels({
+      customer: order.customerId,
+      title: 'Cancellation declined',
+      message: notificationMessage,
+      sendEmail: false
+    });
+
+    let emailSent = false;
+    let emailError = null;
+
+    if (order.customerId?.email) {
+      const emailResult = await attemptCustomerEmail(
+        () => sendGenericCustomerEmail({
+          to: order.customerId.email,
+          name: order.customerId.name,
+          title: 'Cancellation declined',
+          message: notificationMessage
+        }),
+        'Failed to send cancellation rejection email:'
+      );
+
+      emailSent = emailResult.emailSent;
+      emailError = emailResult.emailError;
+    }
+
+    res.json({ message: 'Cancellation rejected', order, emailSent, emailError });
+  } catch (error) {
+    console.error('Cancel rejection error:', error);
+    res.status(500).json({ message: 'Error rejecting cancellation', error: error.message });
   }
 });
 
@@ -1683,6 +1773,7 @@ app.put('/api/orders/:id/cancel', authMiddleware, requireRole('admin', 'employee
     }
 
     const previousStatus = order.status;
+    const hadPendingCancellation = order.cancellationRequest?.status === 'pending';
     order.status = 'cancelled';
     order.completedAt = null;
     order.updatedAt = Date.now();
@@ -1712,38 +1803,52 @@ app.put('/api/orders/:id/cancel', authMiddleware, requireRole('admin', 'employee
 
     if (previousStatus !== 'cancelled') {
       const statusLabel = 'Cancelled';
+      const notificationTitle = hadPendingCancellation ? 'Cancellation approved' : 'Order Cancelled';
+      const notificationMessage = hadPendingCancellation
+        ? buildCancellationDecisionMessage({ orderTitle: order.title, approved: true })
+        : `Your order "${order.title}" has been cancelled.`;
       // Notify user
       const customerId = order.customerId?._id || order.customerId;
       await Notification.create({
         userId: customerId,
         orderId: order._id,
         type: 'order_status',
-        title: 'Order Cancelled',
-        message: `Your order "${order.title}" has been cancelled.`,
+        title: notificationTitle,
+        message: notificationMessage,
         statusFrom: previousStatus,
         statusTo: 'cancelled'
       });
 
       await sendCustomerNotificationChannels({
         customer: order.customerId,
-        title: 'Order cancelled',
-        message: `Your order "${order.title}" has been cancelled.`,
+        title: notificationTitle,
+        message: notificationMessage,
         sendEmail: false
       });
 
       if (order.customerId?.email) {
-        try {
-          await sendOrderStatusEmail({
-            to: order.customerId.email,
-            name: order.customerId.name,
-            orderTitle: order.title,
-            status: statusLabel
-          });
-          emailSent = true;
-        } catch (sendError) {
-          console.error('Failed to send order status email:', sendError);
-          emailError = sendError.message;
-        }
+        const emailResult = hadPendingCancellation
+          ? await attemptCustomerEmail(
+            () => sendGenericCustomerEmail({
+              to: order.customerId.email,
+              name: order.customerId.name,
+              title: 'Cancellation approved',
+              message: notificationMessage
+            }),
+            'Failed to send cancellation approval email:'
+          )
+          : await attemptCustomerEmail(
+            () => sendOrderStatusEmail({
+              to: order.customerId.email,
+              name: order.customerId.name,
+              orderTitle: order.title,
+              status: statusLabel
+            }),
+            'Failed to send order status email:'
+          );
+
+        emailSent = emailResult.emailSent;
+        emailError = emailResult.emailError;
       }
     }
 
@@ -1767,6 +1872,7 @@ app.patch('/api/orders/:id/status', authMiddleware, requireRole('admin', 'employ
     }
 
     const previousStatus = order.status;
+    const hadPendingCancellation = status === 'cancelled' && order.cancellationRequest?.status === 'pending';
     order.status = status;
     order.updatedAt = Date.now();
 
@@ -1774,10 +1880,11 @@ app.patch('/api/orders/:id/status', authMiddleware, requireRole('admin', 'employ
       order.notes.push({ text: note, addedBy: req.user.name });
     }
 
-    if (status === 'cancelled' && order.cancellationRequest?.status === 'pending') {
+    if (hadPendingCancellation) {
       order.cancellationRequest.status = 'approved';
       order.cancellationRequest.resolvedAt = new Date();
       order.cancellationRequest.resolvedBy = req.user._id;
+      order.cancellationRequest.resolutionNote = note || undefined;
     }
 
     await order.save();
@@ -1787,37 +1894,51 @@ app.patch('/api/orders/:id/status', authMiddleware, requireRole('admin', 'employ
 
     if (previousStatus !== status) {
       const statusLabel = formatStatusLabel(status);
+      const notificationTitle = hadPendingCancellation ? 'Cancellation approved' : 'Order status updated';
+      const notificationMessage = hadPendingCancellation
+        ? buildCancellationDecisionMessage({ orderTitle: order.title, approved: true, note })
+        : `Your order "${order.title}" is now ${statusLabel}.`;
       const customerId = order.customerId?._id || order.customerId;
       await Notification.create({
         userId: customerId,
         orderId: order._id,
         type: 'order_status',
-        title: 'Order status updated',
-        message: `Your order "${order.title}" is now ${statusLabel}.`,
+        title: notificationTitle,
+        message: notificationMessage,
         statusFrom: previousStatus,
         statusTo: status
       });
 
       await sendCustomerNotificationChannels({
         customer: order.customerId,
-        title: 'Order status updated',
-        message: `Your order "${order.title}" is now ${statusLabel}.`,
+        title: notificationTitle,
+        message: notificationMessage,
         sendEmail: false
       });
 
       if (order.customerId?.email) {
-        try {
-          await sendOrderStatusEmail({
-            to: order.customerId.email,
-            name: order.customerId.name,
-            orderTitle: order.title,
-            status: statusLabel
-          });
-          emailSent = true;
-        } catch (sendError) {
-          console.error('Failed to send order status email:', sendError);
-          emailError = sendError.message;
-        }
+        const emailResult = hadPendingCancellation
+          ? await attemptCustomerEmail(
+            () => sendGenericCustomerEmail({
+              to: order.customerId.email,
+              name: order.customerId.name,
+              title: 'Cancellation approved',
+              message: notificationMessage
+            }),
+            'Failed to send cancellation approval email:'
+          )
+          : await attemptCustomerEmail(
+            () => sendOrderStatusEmail({
+              to: order.customerId.email,
+              name: order.customerId.name,
+              orderTitle: order.title,
+              status: statusLabel
+            }),
+            'Failed to send order status email:'
+          );
+
+        emailSent = emailResult.emailSent;
+        emailError = emailResult.emailError;
       }
     }
 
@@ -2329,7 +2450,11 @@ app.get('/api', (req, res) => {
 
 // Error Handler
 app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError || err.message === 'Only image files are allowed') {
+  if (
+    err instanceof multer.MulterError ||
+    err.message === 'Only image files are allowed' ||
+    err.message === 'Only image or video files are allowed'
+  ) {
     return res.status(400).json({ message: err.message });
   }
   console.error('Unhandled error:', err);

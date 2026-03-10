@@ -91,6 +91,70 @@
   resize: vertical;
 }
 
+.media-counter {
+  color: var(--text-light);
+  font-size: 0.88rem;
+}
+
+.service-media-preview-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.service-media-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.service-media-label {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.service-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.service-media-grid.single {
+  grid-template-columns: minmax(0, 220px);
+}
+
+.service-media-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.service-media-card img,
+.service-media-card video {
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+  background: var(--muted-bg);
+}
+
+.service-media-card.removable {
+  display: flex;
+  flex-direction: column;
+}
+
+.remove-media-btn {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  background: var(--danger-bg);
+  color: var(--danger);
+  padding: 8px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
@@ -130,11 +194,32 @@
   align-items: center;
 }
 
-.service-row img {
+.service-row-media {
   width: 88px;
   height: 88px;
   border-radius: 10px;
-  object-fit: cover;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--muted-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 8px;
+}
+
+.service-row-media img,
+.service-row-media video {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  background: var(--muted-bg);
+}
+
+.service-row-media.placeholder {
+  line-height: 1.3;
 }
 
 .service-row-content h3 {
@@ -220,9 +305,17 @@
     grid-template-columns: 1fr;
   }
 
-  .service-row img {
+  .service-row-media {
     width: 100%;
     height: 180px;
+    padding: 0;
+  }
+
+  .service-row-media img,
+  .service-row-media video {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
   }
 
   .service-row-actions {

@@ -5,18 +5,29 @@ import {
   FaPlus, FaSearch, FaDownload, FaPrint,
   FaCalendarAlt, FaUser, FaTag,
   FaCheckCircle, FaClock, FaExclamationTriangle,
-  FaEye, FaEdit, FaTrash, FaBan
+  FaEye, FaEdit, FaTrash, FaBan, FaTimes
 } from 'react-icons/fa';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { notificationService } from '../services/api';
+import { getAssetUrl } from '../utils/url';
 import './Orders.css';
 
 const Orders = () => {
   const { user } = useAuth();
   const isStaff = user?.role === 'admin' || user?.role === 'employee';
-  const { orders, loading, error, fetchOrders, deleteOrder, updateOrderStatus, approveCancellation, updateOrder } = useOrders();
+  const {
+    orders,
+    loading,
+    error,
+    fetchOrders,
+    deleteOrder,
+    updateOrderStatus,
+    approveCancellation,
+    rejectCancellation,
+    updateOrder
+  } = useOrders();
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -320,14 +331,45 @@ const Orders = () => {
     }
   };
 
+  const handleCancellationOutcome = (message, data) => {
+    if (data?.emailSent === false && data?.emailError) {
+      toast.warning(`${message}, but email failed: ${data.emailError}`);
+      return;
+    }
+
+    if (data?.emailSent) {
+      toast.success(`${message} & Email Sent`);
+      return;
+    }
+
+    toast.success(message);
+  };
+
   const handleApproveCancellation = async (id) => {
     if (!isStaff) return;
     if (!window.confirm('Approve cancellation and cancel this order?')) return;
-    const result = await approveCancellation(id);
+    const note = window.prompt('Optional note for the customer (leave blank to skip):', '');
+    if (note === null) return;
+
+    const result = await approveCancellation(id, note.trim());
     if (result.success) {
-      toast.success('Cancellation approved');
+      handleCancellationOutcome('Cancellation approved', result.data);
     } else {
       toast.error(result.error || 'Failed to approve cancellation');
+    }
+  };
+
+  const handleRejectCancellation = async (id) => {
+    if (!isStaff) return;
+    if (!window.confirm('Reject this cancellation request?')) return;
+    const note = window.prompt('Optional note for the customer (recommended):', '');
+    if (note === null) return;
+
+    const result = await rejectCancellation(id, note.trim());
+    if (result.success) {
+      handleCancellationOutcome('Cancellation rejected', result.data);
+    } else {
+      toast.error(result.error || 'Failed to reject cancellation');
     }
   };
 
@@ -434,7 +476,7 @@ const Orders = () => {
           <p>Manage customer orders and track production progress</p>
         </div>
         <div className="header-actions">
-          <Link to="/orders/new" className="btn-primary">
+          <Link to="/services" className="btn-primary">
             <FaPlus /> Create New Order
           </Link>
           {isStaff && (
@@ -590,9 +632,10 @@ const Orders = () => {
                     <td className="order-image-cell">
                       {order.images && order.images.length > 0 ? (
                         <img
-                          src={order.images[0].startsWith('http') ? order.images[0] : `http://localhost:5000${order.images[0]}`}
+                          src={getAssetUrl(order.images[0])}
                           alt="Order thumbnail"
                           className="order-thumbnail"
+                          loading="lazy"
                           style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
                         />
                       ) : (
@@ -634,6 +677,9 @@ const Orders = () => {
                       {order.cancellationRequest?.status === 'pending' && (
                         <span className="cancel-requested">Cancellation requested</span>
                       )}
+                      {order.cancellationRequest?.status === 'rejected' && (
+                        <span className="cancel-requested rejected">Cancellation declined</span>
+                      )}
                     </td>
                     {isStaff && (
                       <td className="date">
@@ -674,13 +720,22 @@ const Orders = () => {
                         {isStaff && (
                           <>
                             {order.cancellationRequest?.status === 'pending' && (
-                              <button
-                                className="action-btn cancel"
-                                title="Approve Cancellation"
-                                onClick={() => handleApproveCancellation(order._id)}
-                              >
-                                <FaBan />
-                              </button>
+                              <>
+                                <button
+                                  className="action-btn cancel"
+                                  title="Approve Cancellation"
+                                  onClick={() => handleApproveCancellation(order._id)}
+                                >
+                                  <FaBan />
+                                </button>
+                                <button
+                                  className="action-btn reject"
+                                  title="Reject Cancellation"
+                                  onClick={() => handleRejectCancellation(order._id)}
+                                >
+                                  <FaTimes />
+                                </button>
+                              </>
                             )}
                             <button className="action-btn edit" title="Edit Order" onClick={() => openEditModal(order)}>
                               <FaEdit />

@@ -79,6 +79,11 @@
   font-size: 0.75rem;
 }
 
+.status-sub-badge.rejected {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
 .order-content {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -233,6 +238,37 @@
 
 .approve-btn:disabled {
   background-color: rgba(var(--brand-primary-rgb), 0.35);
+  cursor: not-allowed;
+}
+
+.decision-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reject-btn {
+  background-color: var(--danger);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.reject-btn:hover {
+  background-color: #b53a3a;
+}
+
+.reject-btn:disabled {
+  background-color: #f2a3a3;
   cursor: not-allowed;
 }
 

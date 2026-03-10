@@ -60,7 +60,7 @@ const DashboardRoute = () => {
     return <Navigate to="/login" />;
   }
 
-  return <Navigate to="/orders" replace />;
+  return <Navigate to="/" replace />;
 };
 
 function App() {
@@ -96,7 +96,7 @@ function App() {
               }
             />
 
-            <Route path="/orders/new" element={<Navigate to="/custom-order" replace />} />
+            <Route path="/orders/new" element={<Navigate to="/services" replace />} />
             <Route
               path="/custom-order"
               element={

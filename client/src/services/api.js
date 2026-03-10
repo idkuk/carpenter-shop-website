@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { getApiBaseUrl } from '../utils/url';
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api"
+  baseURL: getApiBaseUrl()
 });
 
 api.interceptors.request.use(
@@ -52,8 +53,8 @@ export const authService = {
     return response.data;
   },
 
-  sendVerificationCode: async (email, channel = 'email') => {
-    const response = await api.post('/auth/send-verification-code', { email, channel });
+  sendVerificationCode: async (email) => {
+    const response = await api.post('/auth/send-verification-code', { email });
     return response.data;
   },
 
@@ -127,6 +128,11 @@ export const orderService = {
 
   approveCancellation: async (id, note) => {
     const response = await api.post(`/orders/${id}/cancel-approve`, { note });
+    return response.data;
+  },
+
+  rejectCancellation: async (id, note) => {
+    const response = await api.post(`/orders/${id}/cancel-reject`, { note });
     return response.data;
   },
 

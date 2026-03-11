@@ -169,6 +169,7 @@ const inventorySchema = new mongoose.Schema({
   supplierContact: String,
   reorderLevel: Number,
   location: String,
+  image: String,
   lastUpdated: { type: Date, default: Date.now }
 });
 
@@ -2346,6 +2347,14 @@ app.patch('/api/notifications/:id/read', authMiddleware, requireObjectId('id'), 
 });
 
 // Inventory Routes
+const inventoryImageMulter = (req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return imageUpload.single('image')(req, res, next);
+  }
+  next();
+};
+
 app.get('/api/inventory', authMiddleware, requireRole('admin', 'employee'), async (req, res) => {
   try {
     const inventory = await Inventory.find().sort({ itemName: 1 });
@@ -2381,8 +2390,11 @@ app.get('/api/inventory/:id', authMiddleware, requireRole('admin', 'employee'), 
   }
 });
 
-app.post('/api/inventory', authMiddleware, requireRole('admin', 'employee'), async (req, res) => {
+app.post('/api/inventory', authMiddleware, requireRole('admin', 'employee'), inventoryImageMulter, async (req, res) => {
   try {
+    const uploadedImage = req.file ? `/uploads/${req.file.filename}` : '';
+    const resolvedImage = uploadedImage || (req.body.image ? String(req.body.image).trim() : '');
+
     const inventory = await Inventory.create({
       itemName: req.body.itemName,
       category: req.body.category,
@@ -2393,6 +2405,7 @@ app.post('/api/inventory', authMiddleware, requireRole('admin', 'employee'), asy
       supplierContact: req.body.supplierContact,
       reorderLevel: parseNumber(req.body.reorderLevel) || 0,
       location: req.body.location,
+      image: resolvedImage || undefined,
       lastUpdated: Date.now()
     });
 
@@ -2406,8 +2419,15 @@ app.post('/api/inventory', authMiddleware, requireRole('admin', 'employee'), asy
   }
 });
 
-app.put('/api/inventory/:id', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), async (req, res) => {
+app.put('/api/inventory/:id', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), inventoryImageMulter, async (req, res) => {
   try {
+    let resolvedImage;
+    if (req.file) {
+      resolvedImage = `/uploads/${req.file.filename}`;
+    } else if (req.body.image !== undefined) {
+      resolvedImage = String(req.body.image).trim();
+    }
+
     const updateData = {
       itemName: req.body.itemName,
       category: req.body.category,
@@ -2418,6 +2438,7 @@ app.put('/api/inventory/:id', authMiddleware, requireRole('admin', 'employee'), 
       supplierContact: req.body.supplierContact,
       reorderLevel: parseNumber(req.body.reorderLevel),
       location: req.body.location,
+      image: resolvedImage,
       lastUpdated: Date.now()
     };
 

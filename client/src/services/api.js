@@ -169,12 +169,22 @@ export const inventoryService = {
   },
 
   createItem: async (itemData) => {
-    const response = await api.post('/inventory', itemData);
+    const isFormData = itemData instanceof FormData;
+    const response = await api.post(
+      '/inventory',
+      itemData,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+    );
     return response.data;
   },
 
   updateItem: async (id, updateData) => {
-    const response = await api.put(`/inventory/${id}`, updateData);
+    const isFormData = updateData instanceof FormData;
+    const response = await api.put(
+      `/inventory/${id}`,
+      updateData,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+    );
     return response.data;
   },
 

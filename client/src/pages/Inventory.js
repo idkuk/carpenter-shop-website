@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaExclamationTriangle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { inventoryService } from '../services/api';
+import { getAssetUrl } from '../utils/url';
 import './Inventory.css';
 
 const emptyForm = {
@@ -13,7 +14,8 @@ const emptyForm = {
   supplier: '',
   supplierContact: '',
   reorderLevel: '',
-  location: ''
+  location: '',
+  image: ''
 };
 
 const Inventory = () => {
@@ -21,6 +23,9 @@ const Inventory = () => {
   const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const loadItems = async () => {
     setLoading(true);
@@ -38,6 +43,20 @@ const Inventory = () => {
     loadItems();
   }, []);
 
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview('');
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [imageFile]);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -45,9 +64,45 @@ const Inventory = () => {
     });
   };
 
+  const handleImageFileChange = (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+  };
+
+  const clearImageFile = () => {
+    setImageFile(null);
+    setFileInputKey((prev) => prev + 1);
+  };
+
   const resetForm = () => {
     setFormData(emptyForm);
     setEditingId(null);
+    setImageFile(null);
+    setFileInputKey((prev) => prev + 1);
+  };
+
+  const buildPayload = (data) => ({
+    itemName: data.itemName.trim(),
+    category: data.category.trim(),
+    quantity: Number(data.quantity) || 0,
+    unit: data.unit.trim(),
+    price: Number(data.price) || 0,
+    supplier: data.supplier.trim(),
+    supplierContact: data.supplierContact.trim(),
+    reorderLevel: Number(data.reorderLevel) || 0,
+    location: data.location.trim(),
+    image: data.image.trim()
+  });
+
+  const buildFormData = (data, file) => {
+    const form = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      form.append(key, value);
+    });
+    form.append('image', file);
+    return form;
   };
 
   const handleSubmit = async (e) => {
@@ -58,24 +113,15 @@ const Inventory = () => {
       return;
     }
 
-    const payload = {
-      itemName: formData.itemName.trim(),
-      category: formData.category.trim(),
-      quantity: Number(formData.quantity) || 0,
-      unit: formData.unit.trim(),
-      price: Number(formData.price) || 0,
-      supplier: formData.supplier.trim(),
-      supplierContact: formData.supplierContact.trim(),
-      reorderLevel: Number(formData.reorderLevel) || 0,
-      location: formData.location.trim()
-    };
+    const payload = buildPayload(formData);
+    const requestPayload = imageFile ? buildFormData(payload, imageFile) : payload;
 
     try {
       if (editingId) {
-        await inventoryService.updateItem(editingId, payload);
+        await inventoryService.updateItem(editingId, requestPayload);
         toast.success('Inventory item updated');
       } else {
-        await inventoryService.createItem(payload);
+        await inventoryService.createItem(requestPayload);
         toast.success('Inventory item created');
       }
 
@@ -97,8 +143,11 @@ const Inventory = () => {
       supplier: item.supplier || '',
       supplierContact: item.supplierContact || '',
       reorderLevel: item.reorderLevel || '',
-      location: item.location || ''
+      location: item.location || '',
+      image: item.image || ''
     });
+    setImageFile(null);
+    setFileInputKey((prev) => prev + 1);
   };
 
   const handleDelete = async (id) => {
@@ -116,6 +165,8 @@ const Inventory = () => {
     if (item.reorderLevel === undefined || item.reorderLevel === null) return false;
     return item.quantity <= item.reorderLevel;
   };
+
+  const previewSrc = imagePreview || (formData.image ? getAssetUrl(formData.image) : '');
 
   return (
     <div className="inventory-page">
@@ -223,15 +274,57 @@ const Inventory = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Location</label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="Storage location"
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <label>Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="Storage location"
+                />
+              </div>
+              <div className="form-group">
+                <label>Image URL (optional)</label>
+                <input
+                  type="text"
+                  name="image"
+                  value={formData.image}
+                  onChange={handleChange}
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Upload Image</label>
+                <input
+                  key={fileInputKey}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                />
+                {imageFile && (
+                  <button type="button" className="btn-secondary btn-small" onClick={clearImageFile}>
+                    Remove Upload
+                  </button>
+                )}
+              </div>
+              <div className="form-group">
+                <label>Preview</label>
+                <div className="inventory-image-preview">
+                  {previewSrc ? (
+                    <img
+                      src={previewSrc}
+                      alt="Inventory preview"
+                    />
+                  ) : (
+                    <span>No image selected</span>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="form-actions">
@@ -258,6 +351,7 @@ const Inventory = () => {
               <table className="inventory-table">
                 <thead>
                   <tr>
+                    <th>Image</th>
                     <th>Item</th>
                     <th>Category</th>
                     <th>Quantity</th>
@@ -269,6 +363,18 @@ const Inventory = () => {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item._id} className={isLowStock(item) ? 'low-stock-row' : ''}>
+                      <td className="inventory-image-cell">
+                        {item.image ? (
+                          <img
+                            src={getAssetUrl(item.image)}
+                            alt={item.itemName}
+                            className="inventory-image"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="inventory-image-placeholder">No Img</div>
+                        )}
+                      </td>
                       <td>{item.itemName}</td>
                       <td>{item.category || '-'}</td>
                       <td>{item.quantity}</td>

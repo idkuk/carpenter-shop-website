@@ -54,6 +54,35 @@
   font-size: 0.95rem;
 }
 
+.form-group input[type="file"] {
+  padding: 8px 0;
+}
+
+.btn-small {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.inventory-image-preview {
+  height: 80px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  background: var(--muted-bg);
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+
+.inventory-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .form-actions {
   display: flex;
   gap: 10px;
@@ -83,6 +112,33 @@
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
   font-size: 0.9rem;
+}
+
+.inventory-image-cell {
+  width: 72px;
+}
+
+.inventory-image {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  background: var(--muted-bg);
+  display: block;
+}
+
+.inventory-image-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--muted-bg);
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  border: 1px dashed var(--border-color);
 }
 
 .low-stock {

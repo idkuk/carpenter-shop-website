@@ -36,15 +36,15 @@ const Footer = () => {
           <div className="contact-info">
             <div className="contact-item">
               <FaPhone className="contact-icon" />
-              <span>+91 98765 43210</span>
+              <span>+91 90297 66741</span>
             </div>
             <div className="contact-item">
               <FaEnvelope className="contact-icon" />
-              <span>info@carpentershop.com</span>
+              <span>carpenteradmin@gmail.com</span>
             </div>
             <div className="contact-item">
               <FaMapMarkerAlt className="contact-icon" />
-              <span>123 Wood Street, Furniture Town, Mumbai 400080</span>
+              <span> Near Brahmand Phase 5, opposite to Apollo Pharmecy,Azad Nagar,Thane (W)-400607</span>
             </div>
           </div>
         </div>

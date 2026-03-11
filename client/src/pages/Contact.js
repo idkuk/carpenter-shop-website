@@ -11,9 +11,9 @@ const Contact = () => (
       <div className="contact-grid">
         <div className="contact-card">
           <h2>Get in Touch</h2>
-          <p>Phone: +91 98765 43210</p>
-          <p>Email: info@carpentershop.com</p>
-          <p>Address: 123 Wood Street, Furniture Town, Mumbai 400080</p>
+          <p>Phone: +91 90297 66741</p>
+          <p>Email: carpenteradmin@gmail.com</p>
+          <p>Address: Near Brahmand Phase 5, opposite to Apollo Pharmecy,Azad Nagar,Thane (W)-400607</p>
           <p>Business Hours: Mon-Fri 9:00 AM - 7:00 PM</p>
         </div>
         <form className="contact-form">

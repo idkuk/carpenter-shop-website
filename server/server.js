@@ -631,26 +631,6 @@ const sampleServices = [
     features: ['Solid wood construction', 'Custom sizes', 'Multiple finish options', 'Storage options']
   },
   {
-    name: 'Dining Table Sets',
-    category: 'dining',
-    description: 'Elegant dining tables with matching chairs, perfect for family gatherings.',
-    price: 'Rs 25000 - Rs 80000',
-    timeline: '3-5 weeks',
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=600',
-    features: ['Expandable designs', 'Scratch-resistant finish', 'Custom seating', 'Various wood types']
-  },
-  {
-    name: 'Office Desks',
-    category: 'office',
-    description: 'Ergonomic office desks with cable management and storage solutions.',
-    price: 'Rs 12000 - Rs 40000',
-    timeline: '2-3 weeks',
-    rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=600',
-    features: ['Cable management', 'Adjustable height', 'Storage drawers', 'Durable finish']
-  },
-  {
     name: 'Wardrobes',
     category: 'storage',
     description: 'Custom-built wardrobes with optimal storage solutions and modern designs.',
@@ -691,16 +671,6 @@ const sampleServices = [
     features: ['Cable management', 'Floating shelves', 'Soft-close drawers', 'Custom finishes']
   },
   {
-    name: 'Kitchen Cabinets',
-    category: 'storage',
-    description: 'Modular kitchen cabinets designed for maximum storage and durable daily use.',
-    price: 'Rs 30000 - Rs 120000',
-    timeline: '4-7 weeks',
-    rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=600',
-    features: ['Modular layout', 'Soft-close hinges', 'Moisture-resistant finish', 'Custom hardware']
-  },
-  {
     name: 'Outdoor Patio Set',
     category: 'living',
     description: 'Weather-treated patio furniture sets ideal for balconies, decks, and gardens.',
@@ -711,16 +681,6 @@ const sampleServices = [
     features: ['Weather-treated wood', 'Optional cushions', 'Compact layouts', 'Easy maintenance']
   },
   {
-    name: 'Kids Study Desk',
-    category: 'office',
-    description: 'Compact study desks with storage and ergonomic proportions for kids.',
-    price: 'Rs 9000 - Rs 28000',
-    timeline: '2-4 weeks',
-    rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=600',
-    features: ['Ergonomic height', 'Storage drawers', 'Rounded edges', 'Custom colors']
-  },
-  {
     name: 'Entryway Shoe Bench',
     category: 'storage',
     description: 'Entry benches with hidden shoe storage to keep your foyer organized.',
@@ -729,16 +689,6 @@ const sampleServices = [
     rating: 4.4,
     image: 'https://images.unsplash.com/photo-1501045661006-fcebe0257c3f?auto=format&fit=crop&w=600',
     features: ['Hidden shoe storage', 'Seat cushion option', 'Wall hooks add-on', 'Compact size']
-  },
-  {
-    name: 'Vanity Cabinets',
-    category: 'storage',
-    description: 'Custom vanity cabinets with water-resistant finishes and organizer drawers.',
-    price: 'Rs 16000 - Rs 55000',
-    timeline: '3-5 weeks',
-    rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1564540574859-0dfb63985953?auto=format&fit=crop&w=600',
-    features: ['Water-resistant finish', 'Sink cutout support', 'Drawer organizers', 'Soft-close slides']
   }
 ];
 

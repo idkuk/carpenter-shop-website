@@ -4,13 +4,13 @@ import './StaticPage.css';
 const About = () => (
   <div className="static-page">
     <div className="static-hero">
-      <h1>About Carpenter Shop</h1>
+      <h1>About WoodWork Hub</h1>
       <p>We craft custom furniture that blends classic workmanship with modern design.</p>
     </div>
     <div className="static-content">
       <h2>Our Story</h2>
       <p>
-        Carpenter Shop started as a small workshop and grew into a trusted team for
+        WoodWork Hub started as a small workshop and grew into a trusted team for
         custom furniture and interior projects. We focus on quality materials,
         clean craftsmanship, and clear communication throughout each order.
       </p>

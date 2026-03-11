@@ -24,20 +24,27 @@
 .nav-logo {
   color: white;
   text-decoration: none;
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 0.06em;
   display: flex;
   align-items: center;
   gap: 10px;
   line-height: 1;
+  text-transform: none;
 }
 
-.nav-logo span {
+.brand-name {
+  color: var(--brand-tertiary);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   line-height: 1;
 }
 
 .logo-icon {
   font-size: 1.8rem;
+  color: var(--brand-tertiary);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
 .nav-menu {

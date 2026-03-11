@@ -4,6 +4,7 @@ import { FaPlus, FaEdit, FaTrash, FaMagic, FaTools } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { serviceService } from '../services/api';
 import { getServiceAdditionalMediaList, getServiceMediaList, isVideoAsset, resolveServiceMediaAsset } from '../utils/serviceMedia';
+import { SERVICE_OFFERING_OPTIONS, getOfferingLabel, normalizeOfferings } from '../utils/serviceOfferings';
 import './ServiceManagement.css';
 
 const emptyForm = {
@@ -15,6 +16,7 @@ const emptyForm = {
   rating: '',
   image: '',
   features: '',
+  offerings: [],
   active: true
 };
 
@@ -171,6 +173,7 @@ const ServiceManagement = () => {
       rating: data.rating ? Number(data.rating) : undefined,
       image: data.image.trim(),
       media: existingMedia,
+      offerings: data.offerings,
       features,
       active: data.active
     };
@@ -217,6 +220,18 @@ const ServiceManagement = () => {
     setMediaFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
+  const toggleOffering = (id) => {
+    setFormData((prev) => {
+      const set = new Set(prev.offerings || []);
+      if (set.has(id)) {
+        set.delete(id);
+      } else {
+        set.add(id);
+      }
+      return { ...prev, offerings: Array.from(set) };
+    });
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!formData.name.trim()) {
@@ -254,6 +269,7 @@ const ServiceManagement = () => {
       rating: service.rating || '',
       image: service.image || '',
       features: Array.isArray(service.features) ? service.features.join(', ') : '',
+      offerings: normalizeOfferings(service.offerings),
       active: service.active !== false
     });
     setExistingMedia(getServiceAdditionalMediaList(service));
@@ -517,6 +533,23 @@ const ServiceManagement = () => {
               />
             </div>
 
+            <div className="form-group">
+              <label>Service Offerings</label>
+              <div className="offerings-grid">
+                {SERVICE_OFFERING_OPTIONS.map((option) => (
+                  <label key={option.id} className="offerings-option">
+                    <input
+                      type="checkbox"
+                      checked={formData.offerings.includes(option.id)}
+                      onChange={() => toggleOffering(option.id)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              <small>These selections power the customer tabs on the Services page.</small>
+            </div>
+
             <label className="checkbox-row">
               <input
                 type="checkbox"
@@ -577,8 +610,20 @@ const ServiceManagement = () => {
                       <span>{service.price || 'Price on request'}</span>
                       <span>{service.timeline || 'Timeline TBA'}</span>
                       <span>{getServiceMediaList(service).length} media</span>
+                      {normalizeOfferings(service.offerings).length > 0 && (
+                        <span>{normalizeOfferings(service.offerings).length} offerings</span>
+                      )}
                       <span>{service.active === false ? 'Inactive' : 'Active'}</span>
                     </div>
+                    {normalizeOfferings(service.offerings).length > 0 && (
+                      <div className="service-offerings-row">
+                        {normalizeOfferings(service.offerings).map((item) => (
+                          <span key={item} className="offer-tag">
+                            {getOfferingLabel(item)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="service-row-actions">
                     <button

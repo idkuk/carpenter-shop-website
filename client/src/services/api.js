@@ -68,6 +68,11 @@ export const authService = {
     return response.data;
   },
 
+  updateProfile: async (profileData) => {
+    const response = await api.patch('/users/me', profileData);
+    return response.data;
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
@@ -239,6 +244,21 @@ export const serviceService = {
       updateData,
       isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
     );
+    return response.data;
+  },
+
+  addReview: async (id, reviewData) => {
+    const response = await api.post(`/services/${id}/reviews`, reviewData);
+    return response.data;
+  },
+
+  getFavorites: async () => {
+    const response = await api.get('/services/favorites');
+    return response.data;
+  },
+
+  toggleFavorite: async (id) => {
+    const response = await api.post(`/services/${id}/favorite`);
     return response.data;
   },
 

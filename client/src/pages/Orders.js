@@ -246,7 +246,7 @@ const Orders = () => {
           </style>
         </head>
         <body>
-          <h1>Carpenter Shop Order Summary</h1>
+          <h1>WoodWork Hub Order Summary</h1>
           <div class="meta">Generated on ${new Date().toLocaleString()}</div>
           <div class="row"><span class="label">Order ID:</span> ${escapeHtml(orderId)}</div>
           <div class="row"><span class="label">Title:</span> ${escapeHtml(order.title)}</div>

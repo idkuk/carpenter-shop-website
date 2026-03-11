@@ -8,7 +8,7 @@ const Footer = () => {
     <footer className="footer">
       <div className="footer-container">
         <div className="footer-section">
-          <h3 className="footer-title">Carpenter Shop</h3>
+          <h3 className="footer-title">WoodWork Hub</h3>
           <p className="footer-description">
             Custom furniture crafted with precision and care.
             Transforming your vision into beautiful, functional pieces.
@@ -60,7 +60,7 @@ const Footer = () => {
       </div>
 
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} Carpenter Shop Management System. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} WoodWork Hub Management System. All rights reserved.</p>
         <p>Developed as B.Sc. Computer Science Capstone Project</p>
       </div>
     </footer>

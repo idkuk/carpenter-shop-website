@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaHome, FaShoppingCart, FaSignOutAlt, FaBars, FaTimes, FaBoxOpen, FaMoon, FaSun, FaTools, FaPenFancy } from 'react-icons/fa';
+import { FaHome, FaShoppingCart, FaSignOutAlt, FaBars, FaTimes, FaBoxOpen, FaMoon, FaSun, FaTools, FaPenFancy, FaHammer } from 'react-icons/fa';
 import './Navbar.css';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -29,9 +29,9 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo" onClick={closeMenu}>
-          <FaShoppingCart className="logo-icon" />
-          <span>Carpenter Shop</span>
+        <Link to="/" className="nav-logo" onClick={closeMenu} aria-label="WoodWork Hub home">
+          <FaHammer className="logo-icon" />
+          <span className="brand-name">WoodWork Hub</span>
         </Link>
 
         <div className="menu-icon" onClick={() => setIsMenuOpen(!isMenuOpen)}>

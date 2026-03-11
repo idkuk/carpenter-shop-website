@@ -10,7 +10,7 @@ import './OrderDetails.css';
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const {
     getOrderById,
     updateOrderStatus,
@@ -23,6 +23,8 @@ const OrderDetails = () => {
   const [status, setStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [addressInput, setAddressInput] = useState('');
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const isStaff = user?.role === 'admin' || user?.role === 'employee';
 
@@ -39,6 +41,14 @@ const OrderDetails = () => {
     };
     fetchOrder();
   }, [id, getOrderById, navigate]);
+
+  useEffect(() => {
+    if (!user?.address) {
+      setAddressInput('');
+      return;
+    }
+    setAddressInput(user.address);
+  }, [user?.address]);
 
   const handleStatusChange = async () => {
     if (!isStaff) return;
@@ -137,9 +147,26 @@ const OrderDetails = () => {
     setIsSubmittingCancel(false);
   };
 
+  const handleSaveAddress = async () => {
+    const trimmed = addressInput.trim();
+    if (!trimmed) {
+      toast.error('Please enter your address');
+      return;
+    }
+    setIsSavingAddress(true);
+    const result = await updateProfile({ address: trimmed });
+    if (result.success) {
+      toast.success('Address saved');
+    } else {
+      toast.error(result.error || 'Failed to save address');
+    }
+    setIsSavingAddress(false);
+  };
+
   if (loading && !order) return <div className="loading">Loading order details...</div>;
   if (!order) return <div className="error">Order not found</div>;
 
+  const displayAddress = order.customerId?.address || user?.address || '';
 
   return (
     <div className="order-details-container">
@@ -240,6 +267,47 @@ const OrderDetails = () => {
               <div className="info-row">
                 <span className="info-label">Phone:</span>
                 <span className="info-value">{order.customerId?.phone || 'N/A'}</span>
+              </div>
+              <div className="info-row address-row">
+                <span className="info-label">Address:</span>
+                <span className="info-value">{order.customerId?.address || 'Not provided'}</span>
+              </div>
+              {!order.customerId?.address && (
+                <p className="address-warning">Customer has not added an address yet.</p>
+              )}
+            </div>
+          )}
+
+          {!isStaff && (
+            <div className="info-card">
+              <h3>Delivery Address</h3>
+              {displayAddress ? (
+                <div className="info-row address-row">
+                  <span className="info-label">Address:</span>
+                  <span className="info-value">{displayAddress}</span>
+                </div>
+              ) : (
+                <p className="address-warning">
+                  Please add your address before we process this order.
+                </p>
+              )}
+              <div className="address-form">
+                <label htmlFor="addressInput">Update address</label>
+                <textarea
+                  id="addressInput"
+                  rows="3"
+                  placeholder="Enter your full address"
+                  value={addressInput}
+                  onChange={(event) => setAddressInput(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="address-save-btn"
+                  onClick={handleSaveAddress}
+                  disabled={isSavingAddress}
+                >
+                  {isSavingAddress ? 'Saving...' : 'Save Address'}
+                </button>
               </div>
             </div>
           )}

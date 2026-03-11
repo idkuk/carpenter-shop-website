@@ -91,6 +91,44 @@
   resize: vertical;
 }
 
+.offerings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.offerings-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.offerings-option input {
+  margin: 0;
+}
+
+.service-offerings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.offer-tag {
+  background: var(--brand-muted);
+  color: var(--brand-primary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .media-counter {
   color: var(--text-light);
   font-size: 0.88rem;

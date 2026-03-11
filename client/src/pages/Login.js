@@ -64,7 +64,7 @@ const Login = () => {
       <div className="auth-card">
         <div className="auth-header">
           <h2>Welcome Back</h2>
-          <p>Login to manage your carpenter shop orders.</p>
+          <p>Login to manage your WoodWork Hub orders.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">

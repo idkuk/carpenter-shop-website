@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaCloudUploadAlt, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useOrders } from '../context/OrderContext';
@@ -18,6 +18,7 @@ const categories = [
 
 const NewOrder = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { createOrder } = useOrders();
   const isStaff = user?.role === 'admin' || user?.role === 'employee';
@@ -48,6 +49,20 @@ const NewOrder = () => {
     };
     loadCustomers();
   }, [isStaff]);
+
+  useEffect(() => {
+    const serviceName = searchParams.get('serviceName');
+    const category = searchParams.get('category');
+
+    if (!serviceName && !category) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      title: prev.title || (serviceName ? `Custom ${serviceName}` : prev.title),
+      category: prev.category || category || '',
+      description: prev.description || (serviceName ? `Looking to customize ${serviceName}.` : prev.description)
+    }));
+  }, [searchParams]);
 
   const handleChange = (e) => {
     setFormData({

@@ -115,6 +115,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await authService.updateProfile(profileData);
+      if (response.user) {
+        setUser(response.user);
+      }
+      return { success: true, data: response };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update profile'
+      };
+    }
+  };
+
   const logout = async () => {
     authService.logout();
     setUser(null);
@@ -127,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     register,
     sendVerificationCode,
     verifyContact,
+    updateProfile,
     logout,
     isAuthenticated: !!user
   }), [user, loading]);

@@ -160,7 +160,7 @@ const AdminDashboard = () => {
       <div className="admin-header">
         <div className="header-left">
           <h1><FaTachometerAlt /> Admin Dashboard</h1>
-          <p>Manage your carpenter shop operations</p>
+          <p>Manage your WoodWork Hub operations</p>
         </div>
         <div className="header-right">
           <div className="search-bar">

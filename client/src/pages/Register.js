@@ -202,7 +202,7 @@ const Register = () => {
 
       <div className="auth-sidebar">
         <div className="sidebar-content">
-          <h3>Carpenter Shop customer portal</h3>
+          <h3>WoodWork Hub customer portal</h3>
           <p>
             Place custom orders, track progress, and stay updated from one dashboard.
           </p>

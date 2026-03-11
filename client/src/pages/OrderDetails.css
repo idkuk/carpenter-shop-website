@@ -329,6 +329,62 @@
   color: var(--text-main);
 }
 
+.address-row {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.address-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin: 0 0 10px 0;
+}
+
+.address-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.address-form label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.address-form textarea {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  resize: vertical;
+}
+
+.address-save-btn {
+  align-self: flex-start;
+  background: var(--brand-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.address-save-btn:hover {
+  background: #1f5e5a;
+}
+
+.address-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .order-content {
     grid-template-columns: 1fr;

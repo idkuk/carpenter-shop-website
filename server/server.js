@@ -30,6 +30,15 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
 const EMAIL_ENABLED = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM);
+const ADMIN_NOTIFY_EMAILS = [
+  ...(process.env.ADMIN_NOTIFY_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean)
+];
+if (process.env.ADMIN_EMAIL) {
+  ADMIN_NOTIFY_EMAILS.push(process.env.ADMIN_EMAIL.trim());
+}
 const VERIFICATION_CODE_LENGTH = Number.parseInt(process.env.VERIFICATION_CODE_LENGTH || '6', 10) || 6;
 const VERIFICATION_CODE_TTL_MINUTES = Number.parseInt(process.env.VERIFICATION_CODE_TTL_MINUTES || '10', 10) || 10;
 const VERIFICATION_CODE_EXPOSE = process.env.NODE_ENV !== 'production' && process.env.VERIFICATION_CODE_EXPOSE === 'true';
@@ -99,6 +108,7 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, default: '' },
   address: String,
   role: { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
+  favoriteServices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
   contactVerified: { type: Boolean, default: false },
   contactVerificationChannel: { type: String, default: 'email' },
   contactVerificationCode: String,
@@ -171,7 +181,17 @@ const serviceSchema = new mongoose.Schema({
   rating: Number,
   image: String,
   media: [String],
+  offerings: [String],
   features: [String],
+  reviews: [
+    {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      name: String,
+      rating: { type: Number, min: 1, max: 5, required: true },
+      comment: String,
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
@@ -300,9 +320,9 @@ const sendResetEmail = async ({ to, resetUrl }) => {
     return;
   }
 
-  const subject = 'Reset your Carpenter Shop password';
+  const subject = 'Reset your WoodWork Hub password';
   const text = [
-    'You requested a password reset for your Carpenter Shop account.',
+    'You requested a password reset for your WoodWork Hub account.',
     `Reset your password using this link: ${resetUrl}`,
     `This link expires in ${RESET_TOKEN_TTL_MINUTES} minutes.`,
     'If you did not request this, you can ignore this email.'
@@ -310,7 +330,7 @@ const sendResetEmail = async ({ to, resetUrl }) => {
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2>Reset your password</h2>
-      <p>You requested a password reset for your Carpenter Shop account.</p>
+      <p>You requested a password reset for your WoodWork Hub account.</p>
       <p><a href="${resetUrl}" style="color: #667eea;">Reset your password</a></p>
       <p>This link expires in ${RESET_TOKEN_TTL_MINUTES} minutes.</p>
       <p>If you did not request this, you can ignore this email.</p>
@@ -339,7 +359,7 @@ const sendOrderStatusEmail = async ({ to, name, orderTitle, status }) => {
     `Hi ${greetingName},`,
     `Your order "${orderTitle}" status is now: ${status}.`,
     'You can log in to view full details.',
-    'Thank you for choosing Carpenter Shop.'
+    'Thank you for choosing WoodWork Hub.'
   ].join('\n\n');
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -347,7 +367,7 @@ const sendOrderStatusEmail = async ({ to, name, orderTitle, status }) => {
       <p>Hi ${greetingName},</p>
       <p>Your order <strong>${orderTitle}</strong> status is now: <strong>${status}</strong>.</p>
       <p>You can log in to view full details.</p>
-      <p>Thank you for choosing Carpenter Shop.</p>
+      <p>Thank you for choosing WoodWork Hub.</p>
     </div>
   `;
 
@@ -367,10 +387,10 @@ const sendGenericCustomerEmail = async ({ to, name, title, message }) => {
   if (!transporter) return false;
 
   const greetingName = name || 'Customer';
-  const subject = title || 'Carpenter Shop update';
+  const subject = title || 'WoodWork Hub update';
   const text = [
     `Hi ${greetingName},`,
-    message || 'There is a new update in your Carpenter Shop account.',
+    message || 'There is a new update in your WoodWork Hub account.',
     'Please log in for full details.'
   ].join('\n\n');
 
@@ -378,7 +398,7 @@ const sendGenericCustomerEmail = async ({ to, name, title, message }) => {
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2>${subject}</h2>
       <p>Hi ${greetingName},</p>
-      <p>${message || 'There is a new update in your Carpenter Shop account.'}</p>
+      <p>${message || 'There is a new update in your WoodWork Hub account.'}</p>
       <p>Please log in for full details.</p>
     </div>
   `;
@@ -390,6 +410,39 @@ const sendGenericCustomerEmail = async ({ to, name, title, message }) => {
     text,
     html
   });
+  return true;
+};
+
+const sendAdminEmail = async ({ to, title, message, orderId }) => {
+  const transporter = getEmailTransporter();
+  if (!transporter) return false;
+
+  const subject = title ? `Admin alert: ${title}` : 'WoodWork Hub admin alert';
+  const orderLine = orderId ? `Order ID: ${orderId}` : '';
+  const text = [
+    subject,
+    message || 'There is a new update in WoodWork Hub.',
+    orderLine,
+    'Please log in for full details.'
+  ].filter(Boolean).join('\n\n');
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2>${subject}</h2>
+      <p>${message || 'There is a new update in WoodWork Hub.'}</p>
+      ${orderLine ? `<p><strong>${orderLine}</strong></p>` : ''}
+      <p>Please log in for full details.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    subject,
+    text,
+    html
+  });
+
   return true;
 };
 
@@ -438,7 +491,7 @@ const sendVerificationCode = async ({ user, code }) => {
   const sentViaEmail = await sendGenericCustomerEmail({
     to: user.email,
     name: user.name,
-    title: 'Verify your Carpenter Shop account',
+    title: 'Verify your WoodWork Hub account',
     message: `Your verification code is ${finalCode}. It is valid for ${minutes} minutes.`
   });
   if (!sentViaEmail) {
@@ -465,10 +518,8 @@ const sendCustomerNotificationChannels = async ({ customer, title, message, send
 };
 
 const notifyAdmins = async ({ title, message, orderId }) => {
-  const admins = await User.find({ role: 'admin' }, '_id');
-  if (!admins.length) return;
-
-  const notifications = admins.map((admin) => ({
+  const admins = await User.find({ role: 'admin' }, '_id email');
+  const adminNotifications = admins.map((admin) => ({
     userId: admin._id,
     orderId,
     type: 'order_update',
@@ -476,7 +527,29 @@ const notifyAdmins = async ({ title, message, orderId }) => {
     message
   }));
 
-  await Notification.insertMany(notifications);
+  if (adminNotifications.length) {
+    await Notification.insertMany(adminNotifications);
+  }
+
+  const emailRecipients = new Set(ADMIN_NOTIFY_EMAILS);
+  admins.forEach((admin) => {
+    if (admin.email) {
+      emailRecipients.add(admin.email);
+    }
+  });
+
+  if (!emailRecipients.size) return;
+
+  try {
+    await sendAdminEmail({
+      to: Array.from(emailRecipients).join(','),
+      title,
+      message,
+      orderId
+    });
+  } catch (error) {
+    console.error('Failed to send admin email notification:', error);
+  }
 };
 
 // Auth Middleware
@@ -682,7 +755,7 @@ mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Carpenter Shop API is running' });
+  res.json({ status: 'OK', message: 'WoodWork Hub API is running' });
 });
 
 // Auth Routes
@@ -993,6 +1066,22 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: serializeUser(req.user) });
 });
 
+app.patch('/api/users/me', authMiddleware, async (req, res) => {
+  try {
+    const address = String(req.body.address || '').trim();
+    if (!address) {
+      return res.status(400).json({ message: 'Address is required' });
+    }
+
+    req.user.address = address;
+    await req.user.save();
+    res.json({ user: serializeUser(req.user) });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Admin user management
 app.post('/api/users', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
@@ -1162,6 +1251,10 @@ app.get('/api/services', async (req, res) => {
   }
 });
 
+app.get('/api/services/favorites', authMiddleware, (req, res) => {
+  res.json({ favorites: req.user.favoriteServices || [] });
+});
+
 app.get('/api/services/:id', requireObjectId('id'), async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
@@ -1171,6 +1264,78 @@ app.get('/api/services/:id', requireObjectId('id'), async (req, res) => {
     res.json(service);
   } catch (error) {
     console.error('Get service error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.post('/api/services/:id/reviews', authMiddleware, requireRole('customer'), requireObjectId('id'), async (req, res) => {
+  try {
+    const ratingValue = parseNumber(req.body.rating);
+    if (!ratingValue || ratingValue < 1 || ratingValue > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    const comment = String(req.body.comment || '').trim();
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+
+    if (!Array.isArray(service.reviews)) {
+      service.reviews = [];
+    }
+
+    const existingIndex = service.reviews.findIndex(
+      (review) => review.userId?.toString() === req.user._id.toString()
+    );
+
+    const reviewPayload = {
+      userId: req.user._id,
+      name: req.user.name,
+      rating: ratingValue,
+      comment,
+      createdAt: new Date()
+    };
+
+    if (existingIndex >= 0) {
+      service.reviews[existingIndex] = {
+        ...service.reviews[existingIndex],
+        ...reviewPayload
+      };
+    } else {
+      service.reviews.unshift(reviewPayload);
+    }
+
+    await service.save();
+    res.status(201).json({ reviews: service.reviews });
+  } catch (error) {
+    console.error('Add service review error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.post('/api/services/:id/favorite', authMiddleware, requireObjectId('id'), async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+
+    const favorites = Array.isArray(req.user.favoriteServices)
+      ? req.user.favoriteServices.map((id) => id.toString())
+      : [];
+    const serviceId = service._id.toString();
+    const exists = favorites.includes(serviceId);
+    const nextFavorites = exists
+      ? favorites.filter((id) => id !== serviceId)
+      : [...favorites, serviceId];
+
+    req.user.favoriteServices = nextFavorites;
+    await req.user.save();
+
+    res.json({ favorites: nextFavorites });
+  } catch (error) {
+    console.error('Toggle favorite error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -1191,6 +1356,7 @@ app.post('/api/services', authMiddleware, requireRole('admin'), serviceMediaMult
     }
 
     const features = parseArray(req.body.features);
+    const offerings = parseArray(req.body.offerings);
     const uploadedMedia = (req.files || []).map((file) => `/uploads/${file.filename}`);
     const requestedMedia = parseStringArray(req.body.media);
     const resolvedMedia = dedupeArray([...requestedMedia, ...uploadedMedia]);
@@ -1209,6 +1375,7 @@ app.post('/api/services', authMiddleware, requireRole('admin'), serviceMediaMult
       rating: parseNumber(rating),
       image: primaryImage,
       media: resolvedMedia,
+      offerings,
       features,
       active: resolvedActive
     });
@@ -1230,6 +1397,7 @@ app.put('/api/services/:id', authMiddleware, requireRole('admin'), requireObject
 
     if (updates.rating !== undefined) updates.rating = parseNumber(updates.rating);
     if (updates.features !== undefined) updates.features = parseArray(updates.features);
+    if (updates.offerings !== undefined) updates.offerings = parseArray(updates.offerings);
     if (updates.active !== undefined) {
       updates.active = updates.active === 'true' || updates.active === true;
     }
@@ -1292,7 +1460,7 @@ app.get('/api/orders', authMiddleware, async (req, res) => {
     if (req.query.status) query.status = req.query.status;
     if (req.query.category) query.category = req.query.category;
 
-    let orderQuery = Order.find(query).populate('customerId', 'name email phone');
+    let orderQuery = Order.find(query).populate('customerId', 'name email phone address');
 
     if (req.query.limit) {
       const limit = parseInt(req.query.limit, 10);
@@ -1316,7 +1484,7 @@ app.get('/api/orders/customer/:customerId', authMiddleware, requireObjectId('cus
     }
 
     const orders = await Order.find({ customerId: req.params.customerId })
-      .populate('customerId', 'name email phone')
+      .populate('customerId', 'name email phone address')
       .sort({ createdAt: -1 });
 
     res.json(orders);
@@ -1329,7 +1497,7 @@ app.get('/api/orders/customer/:customerId', authMiddleware, requireObjectId('cus
 app.get('/api/orders/:id', authMiddleware, requireObjectId('id'), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('customerId', 'name email phone');
+      .populate('customerId', 'name email phone address');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -1405,7 +1573,7 @@ app.post('/api/orders', authMiddleware, orderCreateMulter, async (req, res) => {
     });
 
     await order.save();
-    await order.populate('customerId', 'name email phone');
+    await order.populate('customerId', 'name email phone address');
 
     res.status(201).json({
       message: 'Order created successfully',
@@ -1419,7 +1587,7 @@ app.post('/api/orders', authMiddleware, orderCreateMulter, async (req, res) => {
 
 app.put('/api/orders/:id', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), async (req, res) => {
   try {
-    const existingOrder = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    const existingOrder = await Order.findById(req.params.id).populate('customerId', 'name email phone address');
     if (!existingOrder) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -1471,7 +1639,7 @@ app.put('/api/orders/:id', authMiddleware, requireRole('admin', 'employee'), req
     Object.keys(updateData).forEach((key) => updateData[key] === undefined && delete updateData[key]);
 
     const order = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true })
-      .populate('customerId', 'name email phone');
+      .populate('customerId', 'name email phone address');
 
     let emailSent = false;
     let emailError = null;
@@ -1535,7 +1703,7 @@ app.put('/api/orders/:id', authMiddleware, requireRole('admin', 'employee'), req
 
 app.post('/api/orders/:id/cancel-request', authMiddleware, requireObjectId('id'), async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -1611,7 +1779,7 @@ app.post('/api/orders/:id/cancel-request', authMiddleware, requireObjectId('id')
 
 app.post('/api/orders/:id/cancel-approve', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -1692,7 +1860,7 @@ app.post('/api/orders/:id/cancel-approve', authMiddleware, requireRole('admin', 
 
 app.post('/api/orders/:id/cancel-reject', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -1763,7 +1931,7 @@ app.post('/api/orders/:id/cancel-reject', authMiddleware, requireRole('admin', '
 
 app.put('/api/orders/:id/cancel', authMiddleware, requireRole('admin', 'employee'), requireObjectId('id'), async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -1866,7 +2034,7 @@ app.patch('/api/orders/:id/status', authMiddleware, requireRole('admin', 'employ
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
-    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone');
+    const order = await Order.findById(req.params.id).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -1976,7 +2144,7 @@ app.post('/api/payments/razorpay/order', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'A valid orderId is required' });
     }
 
-    const order = await Order.findById(orderId).populate('customerId', 'name email phone');
+    const order = await Order.findById(orderId).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -2052,7 +2220,7 @@ app.post('/api/payments/razorpay/verify', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Razorpay payment fields are required' });
     }
 
-    const order = await Order.findById(orderId).populate('customerId', 'name email phone');
+    const order = await Order.findById(orderId).populate('customerId', 'name email phone address');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -2445,7 +2613,7 @@ app.get('/api/reports/customers', authMiddleware, requireRole('admin', 'employee
 
 // Base API route
 app.get('/api', (req, res) => {
-  res.json({ message: 'Welcome to Carpenter Shop API' });
+  res.json({ message: 'Welcome to WoodWork Hub API' });
 });
 
 // Error Handler

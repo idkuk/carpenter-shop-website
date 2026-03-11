@@ -17,6 +17,6 @@ test('renders navigation brand', () => {
       </AuthProvider>
     </ThemeProvider>
   );
-  const linkElement = screen.getByRole('link', { name: /carpenter shop/i });
+  const linkElement = screen.getByRole('link', { name: /woodwork hub/i });
   expect(linkElement).toBeInTheDocument();
 });

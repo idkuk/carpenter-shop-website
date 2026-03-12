@@ -53,6 +53,9 @@ const ALLOW_DEV_VERIFICATION_FALLBACK = process.env.NODE_ENV !== 'production';
 const ORDER_PAYMENT_CURRENCY = 'INR';
 const EMAIL_NOT_CONFIGURED_MESSAGE = 'Email notifications are not configured on the server';
 const uploadsDir = path.join(__dirname, 'uploads');
+const clientBuildPath = path.join(__dirname, '..', 'client', 'build');
+const clientIndexPath = path.join(clientBuildPath, 'index.html');
+const shouldServeClient = process.env.NODE_ENV === 'production' && fs.existsSync(clientIndexPath);
 
 fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -2586,6 +2589,16 @@ app.get('/api/reports/customers', authMiddleware, requireRole('admin', 'employee
 app.get('/api', (req, res) => {
   res.json({ message: 'Welcome to WoodWork Hub API' });
 });
+
+if (shouldServeClient) {
+  app.use(express.static(clientBuildPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
+    }
+    return res.sendFile(clientIndexPath);
+  });
+}
 
 // Error Handler
 app.use((err, req, res, next) => {
